@@ -288,6 +288,9 @@
       `${year} ${make} ${model} — ${filmType} tint, ${data.get("shadeLevel")}, ${data.get("coverage")}. ` +
       `We'll bring the van to ${address}.`;
 
+    const SEND_ATTEMPT_MS = 10000;
+    const attemptStarted = Date.now();
+
     quoteSubmitBtn.disabled = true;
     quoteSubmitBtn.setAttribute("aria-busy", "true");
     quoteSubmitBtn.textContent = "Sending…";
@@ -295,7 +298,7 @@
 
     try {
       const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 10000);
+      const timeout = window.setTimeout(() => controller.abort(), SEND_ATTEMPT_MS);
       let response;
       try {
         response = await fetch(formSubmitEndpoint, {
@@ -319,15 +322,16 @@
       }
       // If the browser actually navigates away, none of this ever runs.
       // If the navigation was blocked or silently no-op'd (e.g. a sandboxed
-      // preview), fail visibly instead of leaving the button stuck on
-      // "Sending…" forever.
+      // preview), keep trying for the full attempt window before giving up,
+      // rather than flashing an error the instant the first attempt fails.
+      const remaining = Math.max(0, SEND_ATTEMPT_MS - (Date.now() - attemptStarted));
       window.setTimeout(() => {
         quoteSubmitBtn.disabled = false;
         quoteSubmitBtn.removeAttribute("aria-busy");
         quoteSubmitBtn.textContent = "Get My Free Quote";
         quoteError.hidden = false;
         quoteError.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 1500);
+      }, remaining);
       return;
     }
 
