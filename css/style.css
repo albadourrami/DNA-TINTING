@@ -246,8 +246,13 @@ button { font: inherit; cursor: pointer; }
   padding: 36px; box-shadow: var(--shadow-md);
 }
 .shade-car-stage { display: flex; align-items: center; justify-content: center; }
-.shade-car { width: 100%; max-width: 480px; height: auto; }
-#shadeTintOverlay { transition: opacity 100ms linear; }
+.shade-car-frame { position: relative; width: 100%; max-width: 480px; }
+.shade-car-photo { width: 100%; height: auto; display: block; }
+.shade-tint-overlay {
+  position: absolute; inset: 0; background: #05070C;
+  clip-path: polygon(37.5% 41.46%, 47.19% 31.67%, 62.5% 30.83%, 71.09% 31.25%, 78.13% 34.17%, 86.25% 38.54%, 75.78% 41.46%);
+  opacity: 0.5; transition: opacity 100ms linear; pointer-events: none;
+}
 
 .shade-controls { display: flex; flex-direction: column; gap: 16px; }
 .shade-readout { display: flex; flex-direction: column; gap: 4px; }
