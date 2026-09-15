@@ -3,6 +3,11 @@
 
   document.getElementById("year").textContent = new Date().getFullYear();
 
+  // Inboxes notified when a quote is submitted, via FormSubmit.co (no backend
+  // required). To add more, just add emails here — the form's action and
+  // hidden _cc field below are kept in sync with this on load.
+  const QUOTE_NOTIFY_EMAILS = ["albadourrami@gmail.com"];
+
   /* ---------------------------------------------------------------------
      Sticky header
      --------------------------------------------------------------------- */
@@ -232,17 +237,23 @@
   });
 
   /* ---------------------------------------------------------------------
-     Quote form: validation + local success state
-     NOTE: this form has no backend wired up. Point its submit handler at
-     your email/CRM endpoint (Formspree, HubSpot, custom API, etc.) to
-     receive real leads instead of only showing this confirmation screen.
+     Quote form: validation, then delivery via FormSubmit.co (no backend
+     needed) to every address in QUOTE_NOTIFY_EMAILS. The first submission
+     to a new address makes FormSubmit send it a one-time confirmation
+     email — it must click that link before further submissions arrive.
      --------------------------------------------------------------------- */
   const quoteForm = document.getElementById("quoteForm");
   const quoteSuccess = document.getElementById("quoteSuccess");
   const quoteSummary = document.getElementById("quoteSummary");
   const quoteReset = document.getElementById("quoteReset");
+  const quoteSubmitBtn = quoteForm.querySelector('button[type="submit"]');
 
-  quoteForm.addEventListener("submit", (event) => {
+  const [notifyPrimary, ...notifyCc] = QUOTE_NOTIFY_EMAILS;
+  const formSubmitEndpoint = `https://formsubmit.co/ajax/${encodeURIComponent(notifyPrimary)}`;
+  quoteForm.action = `https://formsubmit.co/${notifyPrimary}`;
+  quoteForm.querySelector('input[name="_cc"]').value = notifyCc.join(",");
+
+  quoteForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     let firstInvalid = null;
@@ -276,6 +287,25 @@
       `${year} ${make} ${model} — ${filmType} tint, ${data.get("shadeLevel")}, ${data.get("coverage")}. ` +
       `We'll bring the van to ${address}.`;
 
+    quoteSubmitBtn.disabled = true;
+    quoteSubmitBtn.textContent = "Sending…";
+
+    try {
+      const response = await fetch(formSubmitEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(Object.fromEntries(data.entries())),
+      });
+      if (!response.ok) throw new Error(`FormSubmit responded ${response.status}`);
+    } catch (err) {
+      // Delivery failed (offline, FormSubmit down, unconfirmed inbox, etc.) —
+      // fall back to a real page submit so the lead still has a chance to land.
+      quoteForm.submit();
+      return;
+    }
+
+    quoteSubmitBtn.disabled = false;
+    quoteSubmitBtn.textContent = "Get My Free Quote";
     quoteForm.hidden = true;
     quoteSuccess.hidden = false;
     quoteSuccess.scrollIntoView({ behavior: "smooth", block: "center" });

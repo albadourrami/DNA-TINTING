@@ -392,7 +392,15 @@
         <p class="section-lead">Pick your year, make, and model, choose a film, and a specialist will confirm exact pricing within one business day.</p>
       </div>
 
-      <form class="quote-form card" id="quoteForm" novalidate>
+      <form class="quote-form card" id="quoteForm" novalidate method="POST" action="https://formsubmit.co/albadourrami@gmail.com">
+        <!-- FormSubmit config: kept in sync with QUOTE_NOTIFY_EMAILS in js/script.js.
+             To notify more inboxes, add emails to that array (this form's action
+             and _cc value are set from it on load; these attributes are just the
+             no-JS fallback). -->
+        <input type="hidden" name="_subject" value="New Quote Request &mdash; DNA Tinting">
+        <input type="hidden" name="_template" value="table">
+        <input type="hidden" name="_cc" value="">
+        <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
 
         <fieldset class="form-fieldset" id="vehicle-fields">
           <legend>Your Vehicle</legend>
