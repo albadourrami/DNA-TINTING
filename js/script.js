@@ -268,14 +268,13 @@
     const make = data.get("vehicleMake");
     const model = data.get("vehicleModel");
     const filmType = data.get("filmType");
-    const serviceLocation = data.get("serviceLocation");
     const address = [data.get("streetAddress"), data.get("city"), data.get("state"), data.get("zip")]
       .filter(Boolean)
       .join(", ");
 
     quoteSummary.textContent =
       `${year} ${make} ${model} — ${filmType} tint, ${data.get("shadeLevel")}, ${data.get("coverage")}. ` +
-      `${serviceLocation} at ${address}.`;
+      `We'll bring the van to ${address}.`;
 
     quoteForm.hidden = true;
     quoteSuccess.hidden = false;

@@ -186,6 +186,7 @@ button { font: inherit; cursor: pointer; }
 
 .hero-inner { position: relative; z-index: 1; max-width: 680px; }
 .eyebrow { font-family: var(--font-heading); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-accent-light); font-size: 0.85rem; margin-bottom: 14px; }
+.hero-area { font-family: var(--font-heading); font-weight: 600; color: #CBD5E1; font-size: 0.95rem; margin-bottom: 14px; }
 .hero h1 { color: #fff; margin-bottom: 20px; }
 .hero-lead { color: #CBD5E1; font-size: 1.15rem; max-width: 560px; margin-bottom: 34px; }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 56px; }
@@ -213,6 +214,15 @@ button { font: inherit; cursor: pointer; }
   padding: 0.5em 1em; border-radius: 999px; background: color-mix(in srgb, var(--color-accent) 10%, transparent);
   color: var(--color-accent-dark);
 }
+
+.service-area-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin: 8px 0 24px; }
+.service-area-chips li {
+  font-family: var(--font-heading); font-weight: 600; font-size: 0.92rem;
+  padding: 0.6em 1.3em; border-radius: 999px; background: var(--color-muted); color: var(--color-primary);
+  border: 1px solid var(--color-border);
+}
+.service-area-note { text-align: center; color: var(--color-text-soft); margin: 0; }
+.service-area-note a { color: var(--color-accent); font-weight: 600; text-decoration: underline; }
 
 .grid { display: grid; gap: 28px; }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }
