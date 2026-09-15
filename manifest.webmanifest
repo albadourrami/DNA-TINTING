@@ -1,0 +1,16 @@
+{
+  "name": "DNA Tinting",
+  "short_name": "DNA Tinting",
+  "description": "100% mobile window tinting in Toledo, OH & surrounding areas.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#05070C",
+  "theme_color": "#05070C",
+  "icons": [
+    {
+      "src": "assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

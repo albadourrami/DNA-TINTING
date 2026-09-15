@@ -289,6 +289,7 @@
       `We'll bring the van to ${address}.`;
 
     quoteSubmitBtn.disabled = true;
+    quoteSubmitBtn.setAttribute("aria-busy", "true");
     quoteSubmitBtn.textContent = "Sending…";
     quoteError.hidden = true;
 
@@ -322,6 +323,7 @@
       // "Sending…" forever.
       window.setTimeout(() => {
         quoteSubmitBtn.disabled = false;
+        quoteSubmitBtn.removeAttribute("aria-busy");
         quoteSubmitBtn.textContent = "Get My Free Quote";
         quoteError.hidden = false;
         quoteError.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -330,6 +332,7 @@
     }
 
     quoteSubmitBtn.disabled = false;
+    quoteSubmitBtn.removeAttribute("aria-busy");
     quoteSubmitBtn.textContent = "Get My Free Quote";
     quoteForm.hidden = true;
     quoteSuccess.hidden = false;
