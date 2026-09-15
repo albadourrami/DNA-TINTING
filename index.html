@@ -187,58 +187,46 @@
       <div class="section-head" data-reveal>
         <p class="kicker">Choose Your Shade</p>
         <h2>From subtle to blacked-out, dialed to your state&rsquo;s legal limit.</h2>
-        <p class="section-lead">VLT (Visible Light Transmission) is the percentage of light let through your glass. Each panel below shows the same window and seat at that shade level, so lower numbers mean darker tint and less visibility inside. We&rsquo;ll always confirm your local legal limits before install.</p>
+        <p class="section-lead">VLT (Visible Light Transmission) is the percentage of light let through your glass. Drag the slider or tap a shade below to see it applied to the car in real time &mdash; lower numbers mean darker tint. We&rsquo;ll always confirm your local legal limits before install.</p>
       </div>
-      <div class="shade-scale">
-        <div class="shade-swatch" style="--shade-opacity:0.06" data-reveal>
-          <svg class="shade-window" viewBox="0 0 160 120" role="img" aria-label="Window at 70 percent VLT, interior clearly visible">
-            <rect width="160" height="120" fill="#cbd5e1"/>
-            <circle cx="80" cy="46" r="16" fill="#64748b"/>
-            <path d="M48 96 Q48 58 80 58 Q112 58 112 96 Z" fill="#64748b"/>
-            <rect class="tint-overlay" width="160" height="120" fill="#05070c"/>
+
+      <div class="shade-interactive" data-reveal>
+        <div class="shade-car-stage">
+          <svg class="shade-car" viewBox="0 0 640 260" role="img" aria-label="Car preview showing the selected window tint darkness">
+            <defs>
+              <clipPath id="shadeWindowClip">
+                <path d="M120 150 Q145 95 195 92 L330 92 Q350 92 350 118 L350 150 Z"/>
+                <path d="M362 92 L440 92 Q478 95 500 150 L362 150 Z"/>
+              </clipPath>
+            </defs>
+            <ellipse cx="320" cy="230" rx="270" ry="14" fill="#0F172A" opacity="0.08"/>
+            <path d="M40 175 L85 105 Q120 60 190 55 L470 55 Q525 58 560 105 L605 175 Z" fill="#1E293B"/>
+            <path d="M120 150 Q145 95 195 92 L330 92 Q350 92 350 118 L350 150 Z" fill="#CBD5E1"/>
+            <path d="M362 92 L440 92 Q478 95 500 150 L362 150 Z" fill="#CBD5E1"/>
+            <rect id="shadeTintOverlay" x="110" y="85" width="400" height="70" fill="#05070C" clip-path="url(#shadeWindowClip)"/>
+            <rect x="40" y="168" width="565" height="18" rx="9" fill="#0F172A"/>
+            <circle cx="160" cy="192" r="30" fill="#0F172A"/>
+            <circle cx="160" cy="192" r="12" fill="#94A3B8"/>
+            <circle cx="480" cy="192" r="30" fill="#0F172A"/>
+            <circle cx="480" cy="192" r="12" fill="#94A3B8"/>
+            <rect x="60" y="140" width="70" height="9" rx="4" fill="#DC2626" opacity="0.85"/>
           </svg>
-          <strong>70% VLT</strong>
-          <span>Light &mdash; near factory glass</span>
         </div>
-        <div class="shade-swatch" style="--shade-opacity:0.3" data-reveal>
-          <svg class="shade-window" viewBox="0 0 160 120" role="img" aria-label="Window at 50 percent VLT, interior mostly visible">
-            <rect width="160" height="120" fill="#cbd5e1"/>
-            <circle cx="80" cy="46" r="16" fill="#64748b"/>
-            <path d="M48 96 Q48 58 80 58 Q112 58 112 96 Z" fill="#64748b"/>
-            <rect class="tint-overlay" width="160" height="120" fill="#05070c"/>
-          </svg>
-          <strong>50% VLT</strong>
-          <span>Light tint, subtle heat cut</span>
-        </div>
-        <div class="shade-swatch" style="--shade-opacity:0.5" data-reveal>
-          <svg class="shade-window" viewBox="0 0 160 120" role="img" aria-label="Window at 35 percent VLT, interior partly visible">
-            <rect width="160" height="120" fill="#cbd5e1"/>
-            <circle cx="80" cy="46" r="16" fill="#64748b"/>
-            <path d="M48 96 Q48 58 80 58 Q112 58 112 96 Z" fill="#64748b"/>
-            <rect class="tint-overlay" width="160" height="120" fill="#05070c"/>
-          </svg>
-          <strong>35% VLT</strong>
-          <span>Most popular daily-driver shade</span>
-        </div>
-        <div class="shade-swatch" style="--shade-opacity:0.72" data-reveal>
-          <svg class="shade-window" viewBox="0 0 160 120" role="img" aria-label="Window at 20 percent VLT, interior barely visible">
-            <rect width="160" height="120" fill="#cbd5e1"/>
-            <circle cx="80" cy="46" r="16" fill="#64748b"/>
-            <path d="M48 96 Q48 58 80 58 Q112 58 112 96 Z" fill="#64748b"/>
-            <rect class="tint-overlay" width="160" height="120" fill="#05070c"/>
-          </svg>
-          <strong>20% VLT</strong>
-          <span>Dark, high privacy</span>
-        </div>
-        <div class="shade-swatch" style="--shade-opacity:0.9" data-reveal>
-          <svg class="shade-window" viewBox="0 0 160 120" role="img" aria-label="Window at 5 percent VLT, interior not visible">
-            <rect width="160" height="120" fill="#cbd5e1"/>
-            <circle cx="80" cy="46" r="16" fill="#64748b"/>
-            <path d="M48 96 Q48 58 80 58 Q112 58 112 96 Z" fill="#64748b"/>
-            <rect class="tint-overlay" width="160" height="120" fill="#05070c"/>
-          </svg>
-          <strong>5% VLT</strong>
-          <span>Limo black &mdash; maximum privacy</span>
+
+        <div class="shade-controls">
+          <div class="shade-readout">
+            <span class="shade-readout-value" id="shadeValue">35% VLT</span>
+            <span class="shade-readout-desc" id="shadeDesc">Most popular daily-driver shade</span>
+          </div>
+          <input type="range" class="shade-slider" id="shadeSlider" min="5" max="70" step="1" value="35" aria-label="Drag to preview window tint darkness by VLT percentage">
+          <div class="shade-slider-scale"><span>5% &mdash; darkest</span><span>70% &mdash; lightest</span></div>
+          <div class="shade-presets" role="group" aria-label="Common tint shades">
+            <button type="button" class="shade-preset" data-vlt="70">70%</button>
+            <button type="button" class="shade-preset" data-vlt="50">50%</button>
+            <button type="button" class="shade-preset is-active" data-vlt="35">35%</button>
+            <button type="button" class="shade-preset" data-vlt="20">20%</button>
+            <button type="button" class="shade-preset" data-vlt="5">5%</button>
+          </div>
         </div>
       </div>
     </div>

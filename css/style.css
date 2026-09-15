@@ -238,18 +238,50 @@ button { font: inherit; cursor: pointer; }
 .check-list li::before { content: "✓"; position: absolute; left: 0; color: var(--color-accent); font-weight: 700; }
 
 /* ==========================================================================
-   Shade scale
+   Interactive shade preview
    ========================================================================== */
-.shade-scale { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
-.shade-swatch { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 160px; text-align: center; transition: transform var(--transition); }
-.shade-swatch:hover { transform: translateY(-4px); }
-.shade-window {
-  width: 100%; height: 120px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
-  display: block; overflow: hidden;
+.shade-interactive {
+  display: grid; grid-template-columns: 1.3fr 1fr; gap: 40px; align-items: center;
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  padding: 36px; box-shadow: var(--shadow-md);
 }
-.shade-window .tint-overlay { opacity: var(--shade-opacity); transition: opacity var(--transition); }
-.shade-swatch strong { font-family: var(--font-heading); }
-.shade-swatch span { font-size: 0.85rem; color: var(--color-text-soft); }
+.shade-car-stage { display: flex; align-items: center; justify-content: center; }
+.shade-car { width: 100%; max-width: 480px; height: auto; }
+#shadeTintOverlay { transition: opacity 100ms linear; }
+
+.shade-controls { display: flex; flex-direction: column; gap: 16px; }
+.shade-readout { display: flex; flex-direction: column; gap: 4px; }
+.shade-readout-value {
+  font-family: var(--font-heading); font-weight: 800; font-size: 2.2rem; color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+.shade-readout-desc { color: var(--color-text-soft); font-size: 0.98rem; }
+
+.shade-slider {
+  width: 100%; height: 6px; border-radius: 999px; appearance: none; -webkit-appearance: none;
+  background: linear-gradient(90deg, #05070C, #cbd5e1); cursor: pointer; outline-offset: 4px;
+}
+.shade-slider::-webkit-slider-thumb {
+  appearance: none; -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--color-accent); border: 3px solid #fff; box-shadow: var(--shadow-sm); cursor: pointer;
+}
+.shade-slider::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--color-accent); border: 3px solid #fff;
+  box-shadow: var(--shadow-sm); cursor: pointer;
+}
+.shade-slider-scale { display: flex; justify-content: space-between; font-size: 0.76rem; color: var(--color-text-soft); }
+
+.shade-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.shade-preset {
+  padding: 0.55em 1.1em; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-surface);
+  font-family: var(--font-heading); font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all var(--transition);
+}
+.shade-preset:hover { border-color: var(--color-accent); }
+.shade-preset.is-active { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+
+@media (max-width: 860px) {
+  .shade-interactive { grid-template-columns: 1fr; padding: 24px; }
+}
 
 /* ==========================================================================
    Steps
@@ -345,11 +377,13 @@ textarea { resize: vertical; }
 .tile:hover > span { border-color: var(--color-accent); }
 .tile[hidden] { display: none; }
 .tile-icon {
-  width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-heading); font-weight: 700; font-size: 0.68rem; letter-spacing: 0.02em;
-  flex-shrink: 0;
+  width: 100%; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.tile-badge-svg { width: 22px; height: 22px; }
+.tile-icon img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.tile-icon--text {
+  width: 38px; height: 38px; border-radius: 50%;
+  font-family: var(--font-heading); font-weight: 700; font-size: 0.68rem; letter-spacing: 0.02em;
+}
 .tile-body-icon { width: 40px; height: 20px; color: var(--color-primary); }
 .tile-desc { font-weight: 400; font-size: 0.72rem; font-style: normal; color: var(--color-text-soft); }
 .tile-empty { font-size: 0.88rem; color: var(--color-text-soft); padding: 12px 4px; margin: 0; }

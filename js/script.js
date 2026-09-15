@@ -28,6 +28,43 @@
   });
 
   /* ---------------------------------------------------------------------
+     Interactive shade preview: slider + presets tint the car's windows live
+     --------------------------------------------------------------------- */
+  const shadeSlider = document.getElementById("shadeSlider");
+  const shadeValue = document.getElementById("shadeValue");
+  const shadeDesc = document.getElementById("shadeDesc");
+  const shadeTintOverlay = document.getElementById("shadeTintOverlay");
+  const shadePresets = document.querySelectorAll(".shade-preset");
+
+  const shadeDescriptionFor = (vlt) => {
+    if (vlt >= 60) return "Light — near factory glass";
+    if (vlt >= 42) return "Light tint, subtle heat cut";
+    if (vlt >= 27) return "Most popular daily-driver shade";
+    if (vlt >= 12) return "Dark, high privacy";
+    return "Limo black — maximum privacy";
+  };
+
+  const updateShadePreview = (vlt) => {
+    const opacity = 0.9 - ((vlt - 5) / 65) * 0.84;
+    shadeTintOverlay.style.opacity = opacity.toFixed(2);
+    shadeValue.textContent = `${vlt}% VLT`;
+    shadeDesc.textContent = shadeDescriptionFor(vlt);
+    shadePresets.forEach((btn) => btn.classList.toggle("is-active", Number(btn.dataset.vlt) === vlt));
+  };
+
+  if (shadeSlider) {
+    updateShadePreview(Number(shadeSlider.value));
+    shadeSlider.addEventListener("input", () => updateShadePreview(Number(shadeSlider.value)));
+    shadePresets.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const vlt = Number(btn.dataset.vlt);
+        shadeSlider.value = String(vlt);
+        updateShadePreview(vlt);
+      });
+    });
+  }
+
+  /* ---------------------------------------------------------------------
      Jump straight to the vehicle selector and focus the first field
      --------------------------------------------------------------------- */
   const vehicleFields = document.getElementById("vehicle-fields");
@@ -126,20 +163,6 @@
     return name.slice(0, 2).toUpperCase();
   };
 
-  // Original geometric marks (not traced from any manufacturer's logo) used
-  // as each make tile's badge — see MAKE_BADGES in vehicle-data.js.
-  const BADGE_SHAPES = {
-    ring: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/>',
-    oval: '<ellipse cx="12" cy="12" rx="9" ry="6" fill="none" stroke="currentColor" stroke-width="2.4"/>',
-    star: '<path d="M12 2.5 14.8 9.3 22 10 16.6 14.8 18.3 21.8 12 18 5.7 21.8 7.4 14.8 2 10 9.2 9.3 Z" fill="currentColor"/>',
-    chevron: '<path d="M4 16 12 8 20 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
-    diamond: '<rect x="6" y="6" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" transform="rotate(45 12 12)"/>',
-    hex: '<path d="M12 3 19.8 7.5 19.8 16.5 12 21 4.2 16.5 4.2 7.5 Z" fill="none" stroke="currentColor" stroke-width="2"/>',
-    shield: '<path d="M12 3 19 6 V12 C19 17 15.5 20 12 21 C8.5 20 5 17 5 12 V6 Z" fill="none" stroke="currentColor" stroke-width="2"/>',
-    quarter: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3 A9 9 0 0 1 21 12 L12 12 Z" fill="currentColor"/><path d="M12 21 A9 9 0 0 1 3 12 L12 12 Z" fill="currentColor"/>',
-    arrowcircle: '<circle cx="11" cy="13" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 8.5 20.5 3.5M20.5 3.5H15.5M20.5 3.5V8.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
-  };
-
   VEHICLE_MAKES.forEach((make, index) => {
     const label = document.createElement("label");
     label.className = "tile";
@@ -152,16 +175,21 @@
 
     const span = document.createElement("span");
     const icon = document.createElement("span");
-    icon.className = "tile-icon";
     icon.setAttribute("aria-hidden", "true");
 
-    const badge = MAKE_BADGES[make] || { shape: "text", color: "#64748B" };
-    icon.style.color = badge.color;
-    icon.style.background = `color-mix(in srgb, ${badge.color} 14%, white)`;
-    if (badge.shape !== "text" && BADGE_SHAPES[badge.shape]) {
-      icon.innerHTML = `<svg class="tile-badge-svg" viewBox="0 0 24 24">${BADGE_SHAPES[badge.shape]}</svg>`;
+    const slug = MAKE_LOGO_SLUGS[make];
+    if (slug) {
+      icon.className = "tile-icon";
+      const img = document.createElement("img");
+      img.src = `assets/logos/${slug}.png`;
+      img.alt = "";
+      img.loading = "lazy";
+      icon.appendChild(img);
     } else {
-      icon.textContent = badge.text || makeInitials(make);
+      icon.className = "tile-icon tile-icon--text";
+      icon.style.color = "#64748B";
+      icon.style.background = "color-mix(in srgb, #64748B 14%, white)";
+      icon.textContent = makeInitials(make);
     }
 
     span.appendChild(icon);
