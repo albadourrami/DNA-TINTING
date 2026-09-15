@@ -104,11 +104,13 @@
   backToTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 
   /* ---------------------------------------------------------------------
-     Vehicle Year / Make / Model cascading selects
+     Vehicle Year select + visual Make tile picker + Model cascade
      --------------------------------------------------------------------- */
   const yearSelect = document.getElementById("vehicleYear");
-  const makeSelect = document.getElementById("vehicleMake");
   const modelSelect = document.getElementById("vehicleModel");
+  const makeTiles = document.getElementById("makeTiles");
+  const makeSearch = document.getElementById("makeSearch");
+  const makeTilesEmpty = document.getElementById("makeTilesEmpty");
 
   VEHICLE_YEARS.forEach((year) => {
     const opt = document.createElement("option");
@@ -117,15 +119,38 @@
     yearSelect.appendChild(opt);
   });
 
-  VEHICLE_MAKES.forEach((make) => {
-    const opt = document.createElement("option");
-    opt.value = make;
-    opt.textContent = make;
-    makeSelect.appendChild(opt);
+  const makeInitials = (name) => {
+    const words = name.split(/[\s-]+/).filter(Boolean);
+    if (words.length > 1) return words.slice(0, 3).map((w) => w[0].toUpperCase()).join("");
+    if (name === name.toUpperCase() && name.length <= 4) return name;
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  VEHICLE_MAKES.forEach((make, index) => {
+    const label = document.createElement("label");
+    label.className = "tile";
+
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "vehicleMake";
+    input.value = make;
+    if (index === 0) input.required = true;
+
+    const span = document.createElement("span");
+    const icon = document.createElement("span");
+    icon.className = "tile-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = makeInitials(make);
+    span.appendChild(icon);
+    span.appendChild(document.createTextNode(make));
+
+    label.appendChild(input);
+    label.appendChild(span);
+    makeTiles.appendChild(label);
   });
 
-  makeSelect.addEventListener("change", () => {
-    const models = VEHICLE_MODELS_BY_MAKE[makeSelect.value];
+  const updateModelsForMake = (make) => {
+    const models = VEHICLE_MODELS_BY_MAKE[make];
     modelSelect.innerHTML = "";
 
     if (!models) {
@@ -137,6 +162,22 @@
     modelSelect.disabled = false;
     modelSelect.appendChild(new Option("Select model", ""));
     models.forEach((model) => modelSelect.appendChild(new Option(model, model)));
+  };
+
+  makeTiles.addEventListener("change", (event) => {
+    if (event.target.name === "vehicleMake") updateModelsForMake(event.target.value);
+  });
+
+  makeSearch.addEventListener("input", () => {
+    const query = makeSearch.value.trim().toLowerCase();
+    let visibleCount = 0;
+    makeTiles.querySelectorAll(".tile").forEach((tile) => {
+      const matches = tile.textContent.toLowerCase().includes(query);
+      tile.hidden = !matches;
+      if (matches) visibleCount += 1;
+    });
+    makeTilesEmpty.hidden = visibleCount > 0;
+    makeTilesEmpty.querySelector("span").textContent = makeSearch.value.trim();
   });
 
   /* ---------------------------------------------------------------------
@@ -157,7 +198,9 @@
     quoteForm.querySelectorAll(".field-invalid").forEach((f) => f.classList.remove("field-invalid"));
 
     quoteForm.querySelectorAll("[required]").forEach((input) => {
-      if (!input.value.trim()) {
+      const isEmptyRadioGroup = input.type === "radio" && !quoteForm.querySelector(`input[name="${input.name}"]:checked`);
+      const isEmptyValue = input.type !== "radio" && !input.value.trim();
+      if (isEmptyRadioGroup || isEmptyValue) {
         const field = input.closest(".field");
         if (field) field.classList.add("field-invalid");
         if (!firstInvalid) firstInvalid = input;
@@ -165,7 +208,7 @@
     });
 
     if (firstInvalid) {
-      firstInvalid.focus();
+      (firstInvalid.type === "radio" ? makeSearch : firstInvalid).focus();
       return;
     }
 
@@ -193,6 +236,8 @@
     modelSelect.innerHTML = "";
     modelSelect.appendChild(new Option("Select make first", ""));
     modelSelect.disabled = true;
+    makeTiles.querySelectorAll(".tile").forEach((tile) => { tile.hidden = false; });
+    makeTilesEmpty.hidden = true;
     quoteForm.querySelectorAll(".field-invalid").forEach((f) => f.classList.remove("field-invalid"));
     quoteSuccess.hidden = true;
     quoteForm.hidden = false;

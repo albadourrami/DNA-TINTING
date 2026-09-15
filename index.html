@@ -408,7 +408,7 @@
 
         <fieldset class="form-fieldset" id="vehicle-fields">
           <legend>Your Vehicle</legend>
-          <div class="form-grid form-grid-3">
+          <div class="form-grid form-grid-2">
             <div class="field">
               <label for="vehicleYear">Year</label>
               <select id="vehicleYear" name="vehicleYear" required>
@@ -416,28 +416,69 @@
               </select>
             </div>
             <div class="field">
-              <label for="vehicleMake">Make</label>
-              <select id="vehicleMake" name="vehicleMake" required>
-                <option value="">Select make</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="vehicleModel">Model</label>
-              <select id="vehicleModel" name="vehicleModel" required disabled>
-                <option value="">Select make first</option>
-              </select>
+              <label for="makeSearch">Make</label>
+              <input type="text" id="makeSearch" placeholder="Search make&hellip;" autocomplete="off">
             </div>
           </div>
+
           <div class="field">
-            <label for="vehicleType">Vehicle Type</label>
-            <select id="vehicleType" name="vehicleType">
-              <option value="">Select type (optional)</option>
-              <option>Sedan / Coupe</option>
-              <option>SUV / Crossover</option>
-              <option>Truck</option>
-              <option>Van / Minivan</option>
-              <option>Sports Car</option>
+            <div class="tile-scroll">
+              <div class="tile-options" id="makeTiles" role="radiogroup" aria-label="Vehicle make"></div>
+              <p class="tile-empty" id="makeTilesEmpty" hidden>No makes match &ldquo;<span></span>&rdquo;.</p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="vehicleModel">Model</label>
+            <select id="vehicleModel" name="vehicleModel" required disabled>
+              <option value="">Select make first</option>
             </select>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Body Style <em>(optional)</em></span>
+            <div class="tile-options tile-options--body" role="radiogroup" aria-label="Body style">
+              <label class="tile tile--body">
+                <input type="radio" name="vehicleType" value="Sedan / Coupe">
+                <span>
+                  <svg class="tile-body-icon" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18 6 10q2-4 8-4h8q5 0 8 4l2 8" stroke-linejoin="round"/><path d="M2 18h44"/></svg>
+                  Sedan / Coupe
+                  <em class="tile-desc">Standard 4-window glass</em>
+                </span>
+              </label>
+              <label class="tile tile--body">
+                <input type="radio" name="vehicleType" value="SUV / Crossover">
+                <span>
+                  <svg class="tile-body-icon" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18 5 8q1-3 6-3h20q4 0 6 4l3 9" stroke-linejoin="round"/><path d="M2 18h44"/></svg>
+                  SUV / Crossover
+                  <em class="tile-desc">Tall doors, large rear hatch</em>
+                </span>
+              </label>
+              <label class="tile tile--body">
+                <input type="radio" name="vehicleType" value="Truck">
+                <span>
+                  <svg class="tile-body-icon" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18V9q0-2 2-2h10q3 0 4 3l2 4h12q3 0 4 3v1" stroke-linejoin="round"/><path d="M2 18h44M22 10v8"/></svg>
+                  Truck
+                  <em class="tile-desc">Cab or crew-cab windows</em>
+                </span>
+              </label>
+              <label class="tile tile--body">
+                <input type="radio" name="vehicleType" value="Van / Minivan">
+                <span>
+                  <svg class="tile-body-icon" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="42" height="11" rx="2"/><path d="M2 18h44"/></svg>
+                  Van / Minivan
+                  <em class="tile-desc">Multiple sliding-door windows</em>
+                </span>
+              </label>
+              <label class="tile tile--body">
+                <input type="radio" name="vehicleType" value="Sports Car">
+                <span>
+                  <svg class="tile-body-icon" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18 8 12q3-3.5 9-3.5h10q6 0 12 6" stroke-linejoin="round"/><path d="M2 18h44"/></svg>
+                  Sports Car
+                  <em class="tile-desc">Low, curved rear glass</em>
+                </span>
+              </label>
+            </div>
           </div>
         </fieldset>
 
