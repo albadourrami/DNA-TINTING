@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 90" width="320" height="90" role="img" aria-labelledby="dnaLogoTitle">
+  <title id="dnaLogoTitle">DNA Tinting</title>
+  <defs>
+    <linearGradient id="dnaStrand" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#DC2626"/>
+      <stop offset="100%" stop-color="#7F1D1D"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(4,10)">
+    <path d="M8 0 C24 8, 24 22, 8 30 C-8 38, -8 52, 8 60" fill="none" stroke="url(#dnaStrand)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M32 0 C16 8, 16 22, 32 30 C48 38, 48 52, 32 60" fill="none" stroke="#1E293B" stroke-width="4" stroke-linecap="round"/>
+    <line x1="9" y1="6" x2="31" y2="6" stroke="#94A3B8" stroke-width="3" stroke-linecap="round"/>
+    <line x1="9" y1="30" x2="31" y2="30" stroke="#94A3B8" stroke-width="3" stroke-linecap="round"/>
+    <line x1="9" y1="54" x2="31" y2="54" stroke="#94A3B8" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <text x="66" y="40" font-family="Outfit, 'Segoe UI', sans-serif" font-weight="700" font-size="30" letter-spacing="1" fill="#0F172A">DNA</text>
+  <text x="66" y="66" font-family="Outfit, 'Segoe UI', sans-serif" font-weight="500" font-size="18" letter-spacing="6" fill="#DC2626">TINTING</text>
+</svg>

@@ -1,0 +1,143 @@
+(() => {
+  "use strict";
+
+  document.getElementById("year").textContent = new Date().getFullYear();
+
+  /* ---------------------------------------------------------------------
+     Sticky header
+     --------------------------------------------------------------------- */
+  const header = document.getElementById("siteHeader");
+  const onScroll = () => header.classList.toggle("is-scrolled", window.scrollY > 40);
+  onScroll();
+  window.addEventListener("scroll", onScroll, { passive: true });
+
+  /* ---------------------------------------------------------------------
+     Mobile nav toggle
+     --------------------------------------------------------------------- */
+  const navToggle = document.getElementById("navToggle");
+  const mainNav = document.getElementById("mainNav");
+  navToggle.addEventListener("click", () => {
+    const isOpen = mainNav.classList.toggle("is-open");
+    navToggle.setAttribute("aria-expanded", String(isOpen));
+  });
+  mainNav.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      mainNav.classList.remove("is-open");
+      navToggle.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  /* ---------------------------------------------------------------------
+     Back to top button
+     --------------------------------------------------------------------- */
+  const backToTop = document.getElementById("backToTop");
+  window.addEventListener("scroll", () => {
+    backToTop.hidden = window.scrollY < 600;
+  }, { passive: true });
+  backToTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+
+  /* ---------------------------------------------------------------------
+     Vehicle Year / Make / Model cascading selects
+     --------------------------------------------------------------------- */
+  const yearSelect = document.getElementById("vehicleYear");
+  const makeSelect = document.getElementById("vehicleMake");
+  const modelSelect = document.getElementById("vehicleModel");
+
+  VEHICLE_YEARS.forEach((year) => {
+    const opt = document.createElement("option");
+    opt.value = String(year);
+    opt.textContent = String(year);
+    yearSelect.appendChild(opt);
+  });
+
+  VEHICLE_MAKES.forEach((make) => {
+    const opt = document.createElement("option");
+    opt.value = make;
+    opt.textContent = make;
+    makeSelect.appendChild(opt);
+  });
+
+  makeSelect.addEventListener("change", () => {
+    const models = VEHICLE_MODELS_BY_MAKE[makeSelect.value];
+    modelSelect.innerHTML = "";
+
+    if (!models) {
+      modelSelect.appendChild(new Option("Select make first", ""));
+      modelSelect.disabled = true;
+      return;
+    }
+
+    modelSelect.disabled = false;
+    modelSelect.appendChild(new Option("Select model", ""));
+    models.forEach((model) => modelSelect.appendChild(new Option(model, model)));
+  });
+
+  /* ---------------------------------------------------------------------
+     Quote form: validation + local success state
+     NOTE: this form has no backend wired up. Point its submit handler at
+     your email/CRM endpoint (Formspree, HubSpot, custom API, etc.) to
+     receive real leads instead of only showing this confirmation screen.
+     --------------------------------------------------------------------- */
+  const quoteForm = document.getElementById("quoteForm");
+  const quoteSuccess = document.getElementById("quoteSuccess");
+  const quoteSummary = document.getElementById("quoteSummary");
+  const quoteReset = document.getElementById("quoteReset");
+
+  quoteForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    let firstInvalid = null;
+    quoteForm.querySelectorAll(".field-invalid").forEach((f) => f.classList.remove("field-invalid"));
+
+    quoteForm.querySelectorAll("[required]").forEach((input) => {
+      if (!input.value.trim()) {
+        const field = input.closest(".field");
+        if (field) field.classList.add("field-invalid");
+        if (!firstInvalid) firstInvalid = input;
+      }
+    });
+
+    if (firstInvalid) {
+      firstInvalid.focus();
+      return;
+    }
+
+    const data = new FormData(quoteForm);
+    const year = data.get("vehicleYear");
+    const make = data.get("vehicleMake");
+    const model = data.get("vehicleModel");
+    const filmType = data.get("filmType");
+
+    quoteSummary.textContent =
+      `${year} ${make} ${model} — ${filmType} tint, ${data.get("shadeLevel")}, ${data.get("coverage")}.`;
+
+    quoteForm.hidden = true;
+    quoteSuccess.hidden = false;
+    quoteSuccess.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
+  quoteReset.addEventListener("click", () => {
+    quoteForm.reset();
+    modelSelect.innerHTML = "";
+    modelSelect.appendChild(new Option("Select make first", ""));
+    modelSelect.disabled = true;
+    quoteForm.querySelectorAll(".field-invalid").forEach((f) => f.classList.remove("field-invalid"));
+    quoteSuccess.hidden = true;
+    quoteForm.hidden = false;
+    quoteForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  /* ---------------------------------------------------------------------
+     FAQ accordion: only one panel open at a time
+     --------------------------------------------------------------------- */
+  const accordionItems = document.querySelectorAll("#accordion .accordion-item");
+  accordionItems.forEach((item) => {
+    item.addEventListener("toggle", () => {
+      if (item.open) {
+        accordionItems.forEach((other) => {
+          if (other !== item) other.open = false;
+        });
+      }
+    });
+  });
+})();
