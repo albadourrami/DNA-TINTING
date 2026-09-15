@@ -28,6 +28,73 @@
   });
 
   /* ---------------------------------------------------------------------
+     Jump straight to the vehicle selector and focus the first field
+     --------------------------------------------------------------------- */
+  const vehicleFields = document.getElementById("vehicle-fields");
+  const focusVehicleYear = () => {
+    const yearField = document.getElementById("vehicleYear");
+    if (yearField) yearField.focus({ preventScroll: true });
+  };
+  document.querySelectorAll('a[href="#vehicle-fields"]').forEach((link) => {
+    link.addEventListener("click", () => window.setTimeout(focusVehicleYear, 500));
+  });
+  if (window.location.hash === "#vehicle-fields" && vehicleFields) {
+    window.setTimeout(focusVehicleYear, 500);
+  }
+
+  /* ---------------------------------------------------------------------
+     Scroll-reveal: progressive enhancement, only runs with IntersectionObserver
+     and outside prefers-reduced-motion
+     --------------------------------------------------------------------- */
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!prefersReducedMotion && "IntersectionObserver" in window) {
+    document.documentElement.classList.add("js-reveal");
+    const revealTargets = document.querySelectorAll("[data-reveal]");
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: "0px 0px -40px 0px" });
+    revealTargets.forEach((el) => revealObserver.observe(el));
+  }
+
+  /* ---------------------------------------------------------------------
+     Animated stat counters
+     --------------------------------------------------------------------- */
+  const statsGrid = document.getElementById("statsGrid");
+  if (statsGrid && "IntersectionObserver" in window) {
+    const animateCount = (el) => {
+      const target = Number(el.dataset.count);
+      const suffix = el.dataset.suffix || "";
+      if (prefersReducedMotion) {
+        el.textContent = `${target}${suffix}`;
+        return;
+      }
+      const duration = 1200;
+      const start = performance.now();
+      const step = (now) => {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = `${Math.round(target * eased)}${suffix}`;
+        if (progress < 1) window.requestAnimationFrame(step);
+      };
+      window.requestAnimationFrame(step);
+    };
+    const statsObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.querySelectorAll("[data-count]").forEach(animateCount);
+          statsObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.4 });
+    statsObserver.observe(statsGrid);
+  }
+
+  /* ---------------------------------------------------------------------
      Back to top button
      --------------------------------------------------------------------- */
   const backToTop = document.getElementById("backToTop");
@@ -107,9 +174,14 @@
     const make = data.get("vehicleMake");
     const model = data.get("vehicleModel");
     const filmType = data.get("filmType");
+    const serviceLocation = data.get("serviceLocation");
+    const address = [data.get("streetAddress"), data.get("city"), data.get("state"), data.get("zip")]
+      .filter(Boolean)
+      .join(", ");
 
     quoteSummary.textContent =
-      `${year} ${make} ${model} — ${filmType} tint, ${data.get("shadeLevel")}, ${data.get("coverage")}.`;
+      `${year} ${make} ${model} — ${filmType} tint, ${data.get("shadeLevel")}, ${data.get("coverage")}. ` +
+      `${serviceLocation} at ${address}.`;
 
     quoteForm.hidden = true;
     quoteSuccess.hidden = false;
