@@ -192,24 +192,77 @@
 
       <div class="shade-interactive" data-reveal>
         <div class="shade-car-stage">
-          <svg class="shade-car" viewBox="0 0 640 260" role="img" aria-label="Car preview showing the selected window tint darkness">
+          <svg class="shade-car" viewBox="0 0 800 300" role="img" aria-label="Sedan preview showing the selected window tint darkness">
             <defs>
+              <linearGradient id="shadeBodyGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#9CA5B1"/>
+                <stop offset="42%" stop-color="#636B78"/>
+                <stop offset="100%" stop-color="#333A44"/>
+              </linearGradient>
+              <radialGradient id="shadeWheelGrad" cx="50%" cy="42%" r="60%">
+                <stop offset="0%" stop-color="#C3C9D1"/>
+                <stop offset="100%" stop-color="#7C8592"/>
+              </radialGradient>
               <clipPath id="shadeWindowClip">
-                <path d="M120 150 Q145 95 195 92 L330 92 Q350 92 350 118 L350 150 Z"/>
-                <path d="M362 92 L440 92 Q478 95 500 150 L362 150 Z"/>
+                <path d="M255 141 L259 88 L290 76 L374 73 L374 141 Z"/>
+                <path d="M392 141 L396 76 L445 74 L480 79 L510 90 L535 103 L548 125 L556 141 Z"/>
               </clipPath>
             </defs>
-            <ellipse cx="320" cy="230" rx="270" ry="14" fill="#0F172A" opacity="0.08"/>
-            <path d="M40 175 L85 105 Q120 60 190 55 L470 55 Q525 58 560 105 L605 175 Z" fill="#1E293B"/>
-            <path d="M120 150 Q145 95 195 92 L330 92 Q350 92 350 118 L350 150 Z" fill="#CBD5E1"/>
-            <path d="M362 92 L440 92 Q478 95 500 150 L362 150 Z" fill="#CBD5E1"/>
-            <rect id="shadeTintOverlay" x="110" y="85" width="400" height="70" fill="#05070C" clip-path="url(#shadeWindowClip)"/>
-            <rect x="40" y="168" width="565" height="18" rx="9" fill="#0F172A"/>
-            <circle cx="160" cy="192" r="30" fill="#0F172A"/>
-            <circle cx="160" cy="192" r="12" fill="#94A3B8"/>
-            <circle cx="480" cy="192" r="30" fill="#0F172A"/>
-            <circle cx="480" cy="192" r="12" fill="#94A3B8"/>
-            <rect x="60" y="140" width="70" height="9" rx="4" fill="#DC2626" opacity="0.85"/>
+
+            <ellipse cx="380" cy="256" rx="270" ry="14" fill="#0F172A" opacity="0.12"/>
+
+            <!-- body -->
+            <path d="M90 214 L90 194 Q90 185 100 183 L122 181
+                     Q130 154 158 144 L195 136
+                     Q206 132 214 118 Q230 90 265 79 Q295 71 328 70
+                     L445 70 Q476 71 503 80 Q533 90 546 116
+                     Q553 130 562 136 L592 144
+                     Q618 152 627 176 L648 180
+                     Q658 182 658 192 L658 214 Z"
+                  fill="url(#shadeBodyGrad)"/>
+
+            <!-- character line -->
+            <path d="M122 171 Q380 160 648 174" fill="none" stroke="#242A32" stroke-width="2" opacity="0.45"/>
+            <path d="M122 165 Q380 155 648 168" fill="none" stroke="#AEB6C0" stroke-width="1.5" opacity="0.55"/>
+
+            <!-- windshield (static, not tinted) -->
+            <path d="M200 141 L211 122 L235 96 L252 84 L248 141 Z" fill="#C7D1DB" opacity="0.9"/>
+            <!-- door windows (tinted live) -->
+            <path d="M255 141 L259 88 L290 76 L374 73 L374 141 Z" fill="#C7D1DB"/>
+            <path d="M392 141 L396 76 L445 74 L480 79 L510 90 L535 103 L548 125 L556 141 Z" fill="#C7D1DB"/>
+            <!-- pillars -->
+            <rect x="248" y="82" width="7" height="60" fill="#3A4149"/>
+            <rect x="374" y="70" width="18" height="72" fill="#3A4149"/>
+            <rect id="shadeTintOverlay" x="255" y="70" width="303" height="72" fill="#05070C" clip-path="url(#shadeWindowClip)"/>
+
+            <!-- door seam -->
+            <line x1="383" y1="142" x2="379" y2="210" stroke="#242A32" stroke-width="1.5" opacity="0.45"/>
+            <rect x="296" y="146" width="26" height="5" rx="2.5" fill="#20262D" opacity="0.7"/>
+            <rect x="432" y="146" width="26" height="5" rx="2.5" fill="#20262D" opacity="0.7"/>
+
+            <!-- mirror -->
+            <path d="M236 128 Q222 126 218 136 Q216 144 228 144 L242 140 L244 128 Z" fill="#4A515A"/>
+
+            <!-- lights -->
+            <rect x="98" y="188" width="24" height="15" rx="6" fill="#E9EEF3" opacity="0.95"/>
+            <rect x="632" y="184" width="24" height="15" rx="6" fill="#DC2626" opacity="0.8"/>
+
+            <!-- grille hint -->
+            <line x1="96" y1="196" x2="96" y2="204" stroke="#20262D" stroke-width="5" stroke-linecap="round" opacity="0.3"/>
+
+            <!-- antenna -->
+            <line x1="470" y1="70" x2="476" y2="54" stroke="#3A4149" stroke-width="2" stroke-linecap="round"/>
+
+            <!-- rocker -->
+            <rect x="90" y="207" width="568" height="8" rx="4" fill="#20262D"/>
+
+            <!-- wheels -->
+            <circle cx="216" cy="220" r="40" fill="#181C21"/>
+            <circle cx="216" cy="220" r="23" fill="url(#shadeWheelGrad)"/>
+            <circle cx="216" cy="220" r="6" fill="#3A4149"/>
+            <circle cx="546" cy="220" r="40" fill="#181C21"/>
+            <circle cx="546" cy="220" r="23" fill="url(#shadeWheelGrad)"/>
+            <circle cx="546" cy="220" r="6" fill="#3A4149"/>
           </svg>
         </div>
 
