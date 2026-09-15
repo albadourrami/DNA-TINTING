@@ -46,3 +46,44 @@ const VEHICLE_MODELS_BY_MAKE = {
 };
 
 const VEHICLE_MAKES = Object.keys(VEHICLE_MODELS_BY_MAKE).sort((a, b) => a.localeCompare(b));
+
+// Badge shown on each make's tile in the vehicle picker. These are original
+// geometric marks (not traced from any manufacturer's registered logo) —
+// a shape + color pairing loosely evocative of each brand, plus a text
+// fallback for brands with no assigned shape.
+const MAKE_BADGES = {
+  Acura: { shape: "shield", color: "#334155", text: "A" },
+  "Alfa Romeo": { shape: "shield", color: "#7C2D12", text: "AR" },
+  Audi: { shape: "ring", color: "#1E3A8A" },
+  BMW: { shape: "quarter", color: "#0369A1" },
+  Buick: { shape: "shield", color: "#0369A1", text: "B" },
+  Cadillac: { shape: "shield", color: "#92400E", text: "C" },
+  Chevrolet: { shape: "chevron", color: "#B91C1C" },
+  Chrysler: { shape: "hex", color: "#334155", text: "C" },
+  Dodge: { shape: "text", color: "#B91C1C", text: "DO" },
+  Ford: { shape: "oval", color: "#1E3A8A", text: "F" },
+  Genesis: { shape: "hex", color: "#0F172A", text: "G" },
+  GMC: { shape: "text", color: "#B45309", text: "GMC" },
+  Honda: { shape: "text", color: "#0369A1", text: "H" },
+  Hyundai: { shape: "oval", color: "#0F766E", text: "H" },
+  "Infiniti": { shape: "ring", color: "#0F172A" },
+  Jaguar: { shape: "text", color: "#065F46", text: "JAG" },
+  Jeep: { shape: "shield", color: "#065F46", text: "J" },
+  Kia: { shape: "oval", color: "#B91C1C", text: "K" },
+  "Land Rover": { shape: "hex", color: "#065F46", text: "LR" },
+  Lexus: { shape: "ring", color: "#334155", text: "L" },
+  Lincoln: { shape: "diamond", color: "#6D28D9", text: "L" },
+  Mazda: { shape: "text", color: "#B91C1C", text: "MA" },
+  "Mercedes-Benz": { shape: "star", color: "#334155" },
+  Mini: { shape: "ring", color: "#92400E", text: "M" },
+  Mitsubishi: { shape: "diamond", color: "#B91C1C" },
+  Nissan: { shape: "text", color: "#7C2D12", text: "NI" },
+  Porsche: { shape: "shield", color: "#92400E", text: "P" },
+  Ram: { shape: "text", color: "#7C2D12", text: "RAM" },
+  Subaru: { shape: "star", color: "#1E3A8A" },
+  Tesla: { shape: "text", color: "#334155", text: "T" },
+  Toyota: { shape: "ring", color: "#B91C1C" },
+  Volkswagen: { shape: "text", color: "#1E3A8A", text: "VW" },
+  Volvo: { shape: "arrowcircle", color: "#334155" },
+  Other: { shape: "text", color: "#64748B", text: "OT" },
+};

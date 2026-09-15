@@ -126,6 +126,20 @@
     return name.slice(0, 2).toUpperCase();
   };
 
+  // Original geometric marks (not traced from any manufacturer's logo) used
+  // as each make tile's badge — see MAKE_BADGES in vehicle-data.js.
+  const BADGE_SHAPES = {
+    ring: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/>',
+    oval: '<ellipse cx="12" cy="12" rx="9" ry="6" fill="none" stroke="currentColor" stroke-width="2.4"/>',
+    star: '<path d="M12 2.5 14.8 9.3 22 10 16.6 14.8 18.3 21.8 12 18 5.7 21.8 7.4 14.8 2 10 9.2 9.3 Z" fill="currentColor"/>',
+    chevron: '<path d="M4 16 12 8 20 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
+    diamond: '<rect x="6" y="6" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" transform="rotate(45 12 12)"/>',
+    hex: '<path d="M12 3 19.8 7.5 19.8 16.5 12 21 4.2 16.5 4.2 7.5 Z" fill="none" stroke="currentColor" stroke-width="2"/>',
+    shield: '<path d="M12 3 19 6 V12 C19 17 15.5 20 12 21 C8.5 20 5 17 5 12 V6 Z" fill="none" stroke="currentColor" stroke-width="2"/>',
+    quarter: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3 A9 9 0 0 1 21 12 L12 12 Z" fill="currentColor"/><path d="M12 21 A9 9 0 0 1 3 12 L12 12 Z" fill="currentColor"/>',
+    arrowcircle: '<circle cx="11" cy="13" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 8.5 20.5 3.5M20.5 3.5H15.5M20.5 3.5V8.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  };
+
   VEHICLE_MAKES.forEach((make, index) => {
     const label = document.createElement("label");
     label.className = "tile";
@@ -140,7 +154,16 @@
     const icon = document.createElement("span");
     icon.className = "tile-icon";
     icon.setAttribute("aria-hidden", "true");
-    icon.textContent = makeInitials(make);
+
+    const badge = MAKE_BADGES[make] || { shape: "text", color: "#64748B" };
+    icon.style.color = badge.color;
+    icon.style.background = `color-mix(in srgb, ${badge.color} 14%, white)`;
+    if (badge.shape !== "text" && BADGE_SHAPES[badge.shape]) {
+      icon.innerHTML = `<svg class="tile-badge-svg" viewBox="0 0 24 24">${BADGE_SHAPES[badge.shape]}</svg>`;
+    } else {
+      icon.textContent = badge.text || makeInitials(make);
+    }
+
     span.appendChild(icon);
     span.appendChild(document.createTextNode(make));
 
