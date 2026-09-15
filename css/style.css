@@ -407,6 +407,8 @@ textarea { resize: vertical; }
 
 .form-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--color-border); margin-top: 8px; padding-top: 24px; }
 .form-disclaimer { font-size: 0.82rem; color: var(--color-text-soft); max-width: 360px; margin: 0; }
+.form-error { order: 3; flex-basis: 100%; margin: 0; padding: 12px 16px; border-radius: var(--radius-sm); background: #FEF2F2; border: 1px solid #FECACA; color: #B91C1C; font-size: 0.9rem; font-weight: 600; }
+.form-error a { color: inherit; text-decoration: underline; }
 
 .field.field-invalid input, .field.field-invalid select { border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(220,38,38,0.12); }
 .field-error { color: var(--color-accent); font-size: 0.8rem; }

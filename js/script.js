@@ -246,6 +246,7 @@
   const quoteSuccess = document.getElementById("quoteSuccess");
   const quoteSummary = document.getElementById("quoteSummary");
   const quoteReset = document.getElementById("quoteReset");
+  const quoteError = document.getElementById("quoteError");
   const quoteSubmitBtn = quoteForm.querySelector('button[type="submit"]');
 
   const [notifyPrimary, ...notifyCc] = QUOTE_NOTIFY_EMAILS;
@@ -289,18 +290,42 @@
 
     quoteSubmitBtn.disabled = true;
     quoteSubmitBtn.textContent = "Sending…";
+    quoteError.hidden = true;
 
     try {
-      const response = await fetch(formSubmitEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(Object.fromEntries(data.entries())),
-      });
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 10000);
+      let response;
+      try {
+        response = await fetch(formSubmitEndpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(Object.fromEntries(data.entries())),
+          signal: controller.signal,
+        });
+      } finally {
+        window.clearTimeout(timeout);
+      }
       if (!response.ok) throw new Error(`FormSubmit responded ${response.status}`);
     } catch (err) {
-      // Delivery failed (offline, FormSubmit down, unconfirmed inbox, etc.) —
-      // fall back to a real page submit so the lead still has a chance to land.
-      quoteForm.submit();
+      // Delivery failed (offline, FormSubmit down, blocked by a sandboxed
+      // preview, unconfirmed inbox, etc.) — try a real page submit so the
+      // lead still has a chance to land.
+      try {
+        quoteForm.submit();
+      } catch (submitErr) {
+        // ignore — the timeout below covers this case too
+      }
+      // If the browser actually navigates away, none of this ever runs.
+      // If the navigation was blocked or silently no-op'd (e.g. a sandboxed
+      // preview), fail visibly instead of leaving the button stuck on
+      // "Sending…" forever.
+      window.setTimeout(() => {
+        quoteSubmitBtn.disabled = false;
+        quoteSubmitBtn.textContent = "Get My Free Quote";
+        quoteError.hidden = false;
+        quoteError.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 1500);
       return;
     }
 
@@ -319,6 +344,7 @@
     makeTiles.querySelectorAll(".tile").forEach((tile) => { tile.hidden = false; });
     makeTilesEmpty.hidden = true;
     quoteForm.querySelectorAll(".field-invalid").forEach((f) => f.classList.remove("field-invalid"));
+    quoteError.hidden = true;
     quoteSuccess.hidden = true;
     quoteForm.hidden = false;
     quoteForm.scrollIntoView({ behavior: "smooth", block: "start" });
