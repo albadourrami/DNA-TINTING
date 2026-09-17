@@ -121,18 +121,18 @@
   }
 
   /* ---------------------------------------------------------------------
-     Jump straight to the vehicle selector and focus the first field
+     Jump straight to the pricing calculator and focus the first option
      --------------------------------------------------------------------- */
-  const vehicleFields = document.getElementById("vehicle-fields");
-  const focusVehicleYear = () => {
-    const yearField = document.getElementById("vehicleYear");
-    if (yearField) yearField.focus({ preventScroll: true });
+  const pricingCalculatorEl = document.getElementById("pricing-calculator");
+  const focusPricingCategory = () => {
+    const firstTile = document.querySelector('input[name="pricingCategory"]');
+    if (firstTile) firstTile.focus({ preventScroll: true });
   };
-  document.querySelectorAll('a[href="#vehicle-fields"]').forEach((link) => {
-    link.addEventListener("click", () => window.setTimeout(focusVehicleYear, 500));
+  document.querySelectorAll('a[href="#pricing-calculator"]').forEach((link) => {
+    link.addEventListener("click", () => window.setTimeout(focusPricingCategory, 500));
   });
-  if (window.location.hash === "#vehicle-fields" && vehicleFields) {
-    window.setTimeout(focusVehicleYear, 500);
+  if (window.location.hash === "#pricing-calculator" && pricingCalculatorEl) {
+    window.setTimeout(focusPricingCategory, 500);
   }
 
   /* ---------------------------------------------------------------------
@@ -300,6 +300,179 @@
   const quoteError = document.getElementById("quoteError");
   const quoteSubmitBtn = quoteForm.querySelector('button[type="submit"]');
 
+  /* ---------------------------------------------------------------------
+     Pricing calculator: instant price by vehicle type, film, and window
+     count, then hands off into the booking form above.
+     --------------------------------------------------------------------- */
+  const PRICING = {
+    sedan: {
+      label: "Sedan / Coupe",
+      Carbon: { perWindow: 47.0, bundle6: 275.0 },
+      Ceramic: { perWindow: 85.0, bundle6: 499.0 },
+    },
+    suv_truck: {
+      label: "SUV / Truck",
+      Carbon: { perWindow: 49.99, bundle6: 299.0 },
+      Ceramic: { perWindow: 89.99, bundle6: 525.0 },
+    },
+  };
+  const WINDOW_COUNTS = [
+    { count: 2, example: "e.g. both front doors" },
+    { count: 3, example: "e.g. front doors + windshield strip" },
+    { count: 4, example: "e.g. all four doors" },
+    { count: 5, example: "e.g. four doors + rear glass" },
+    { count: 6, example: "Full vehicle — best value" },
+  ];
+
+  const formatPrice = (n) => `$${n.toFixed(2)}`;
+  const pricingWindowPrice = (category, film, count) => {
+    const rates = PRICING[category][film];
+    return count === 6 ? rates.bundle6 : rates.perWindow * count;
+  };
+  const getCheckedValue = (name) => document.querySelector(`input[name="${name}"]:checked`)?.value || "";
+
+  const pricingStepFilm = document.getElementById("pricingStepFilm");
+  const pricingStepWindows = document.getElementById("pricingStepWindows");
+  const pricingStepCustom = document.getElementById("pricingStepCustom");
+  const pricingWindowOptions = document.getElementById("pricingWindowOptions");
+  const pricingResult = document.getElementById("pricingResult");
+  const pricingResultLabel = document.getElementById("pricingResultLabel");
+  const pricingResultPrice = document.getElementById("pricingResultPrice");
+  const pricingResultNote = document.getElementById("pricingResultNote");
+  const pricingContinueBtn = document.getElementById("pricingContinueBtn");
+  const pricingSummary = document.getElementById("pricingSummary");
+  const pricingSummaryCategory = document.getElementById("pricingSummaryCategory");
+  const pricingSummaryDetail = document.getElementById("pricingSummaryDetail");
+  const pricingSummaryPrice = document.getElementById("pricingSummaryPrice");
+  const pricingEditBtn = document.getElementById("pricingEditBtn");
+  const pricingVehicleTypeField = document.getElementById("pricingVehicleType");
+  const pricingFilmTypeField = document.getElementById("pricingFilmTypeField");
+  const pricingWindowCountField = document.getElementById("pricingWindowCountField");
+  const pricingEstimatedPriceField = document.getElementById("pricingEstimatedPriceField");
+
+  const renderWindowOptions = (category, film) => {
+    const previouslySelected = getCheckedValue("pricingWindows");
+    pricingWindowOptions.innerHTML = "";
+    WINDOW_COUNTS.forEach(({ count, example }) => {
+      const price = pricingWindowPrice(category, film, count);
+      const label = document.createElement("label");
+      label.className = "pricing-window-pill";
+
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = "pricingWindows";
+      input.value = String(count);
+      if (String(count) === previouslySelected) input.checked = true;
+
+      const span = document.createElement("span");
+      const countSpan = document.createElement("span");
+      countSpan.className = "pricing-window-count";
+      countSpan.textContent = `${count} Window${count > 1 ? "s" : ""}`;
+      const priceSpan = document.createElement("span");
+      priceSpan.className = "pricing-window-price";
+      priceSpan.textContent = formatPrice(price);
+      const exampleSpan = document.createElement("span");
+      exampleSpan.className = "pricing-window-example";
+      exampleSpan.textContent = example;
+      span.append(countSpan, priceSpan, exampleSpan);
+
+      label.append(input, span);
+      pricingWindowOptions.appendChild(label);
+    });
+  };
+
+  const updatePricingResult = () => {
+    const category = getCheckedValue("pricingCategory");
+    const film = getCheckedValue("pricingFilm");
+    const windowCountStr = getCheckedValue("pricingWindows");
+
+    pricingStepFilm.hidden = !category || category === "van_other";
+    pricingStepCustom.hidden = category !== "van_other";
+
+    if (!category) {
+      pricingStepWindows.hidden = true;
+      pricingResult.hidden = true;
+      return;
+    }
+
+    if (category === "van_other") {
+      pricingStepWindows.hidden = true;
+      pricingResult.hidden = false;
+      pricingResultLabel.textContent = "Van / Other";
+      pricingResultPrice.textContent = "Custom Quote";
+      pricingResultNote.textContent = "We'll confirm exact pricing after a quick look at your vehicle's glass.";
+      pricingContinueBtn.textContent = "Continue — Get My Custom Quote";
+      return;
+    }
+
+    if (!film) {
+      pricingStepWindows.hidden = true;
+      pricingResult.hidden = true;
+      return;
+    }
+
+    pricingStepWindows.hidden = false;
+    renderWindowOptions(category, film);
+
+    if (!getCheckedValue("pricingWindows")) {
+      pricingResult.hidden = true;
+      return;
+    }
+
+    const windowCount = Number(getCheckedValue("pricingWindows"));
+    const price = pricingWindowPrice(category, film, windowCount);
+    pricingResult.hidden = false;
+    pricingResultLabel.textContent = `${PRICING[category].label} · ${film} · ${windowCount} Window${windowCount > 1 ? "s" : ""}`;
+    pricingResultPrice.textContent = formatPrice(price);
+    pricingResultNote.textContent =
+      windowCount === 6
+        ? "Full-vehicle bundle price — a discount over per-window pricing."
+        : `${windowCount} window${windowCount > 1 ? "s" : ""} × ${formatPrice(PRICING[category][film].perWindow)} per window.`;
+    pricingContinueBtn.textContent = "Book This Price";
+  };
+
+  document.querySelectorAll('input[name="pricingCategory"], input[name="pricingFilm"]').forEach((input) => {
+    input.addEventListener("change", updatePricingResult);
+  });
+  pricingWindowOptions.addEventListener("change", (event) => {
+    if (event.target.name === "pricingWindows") updatePricingResult();
+  });
+
+  const revealBookingForm = () => {
+    const category = getCheckedValue("pricingCategory");
+    const film = getCheckedValue("pricingFilm");
+    const windowCountStr = getCheckedValue("pricingWindows");
+
+    if (category === "van_other") {
+      pricingVehicleTypeField.value = "Van / Other (Custom Quote)";
+      pricingFilmTypeField.value = "";
+      pricingWindowCountField.value = "";
+      pricingEstimatedPriceField.value = "Custom Quote";
+      pricingSummaryCategory.textContent = "Van / Other";
+      pricingSummaryDetail.textContent = " — Custom Quote";
+      pricingSummaryPrice.textContent = "Custom Quote";
+    } else {
+      const windowCount = Number(windowCountStr);
+      const price = pricingWindowPrice(category, film, windowCount);
+      pricingVehicleTypeField.value = PRICING[category].label;
+      pricingFilmTypeField.value = film;
+      pricingWindowCountField.value = windowCountStr;
+      pricingEstimatedPriceField.value = formatPrice(price);
+      pricingSummaryCategory.textContent = PRICING[category].label;
+      pricingSummaryDetail.textContent = ` — ${film}, ${windowCount} Window${windowCount > 1 ? "s" : ""}`;
+      pricingSummaryPrice.textContent = formatPrice(price);
+    }
+
+    pricingSummary.hidden = false;
+    quoteForm.hidden = false;
+    quoteForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  pricingContinueBtn.addEventListener("click", revealBookingForm);
+  pricingEditBtn.addEventListener("click", () => {
+    pricingCalculatorEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
   const [notifyPrimary, ...notifyCc] = QUOTE_NOTIFY_EMAILS;
   const formSubmitEndpoint = `https://formsubmit.co/ajax/${encodeURIComponent(notifyPrimary)}`;
   quoteForm.action = `https://formsubmit.co/${notifyPrimary}`;
@@ -335,9 +508,13 @@
       .filter(Boolean)
       .join(", ");
 
+    const windowCount = data.get("windowCount");
+    const estimatedPrice = data.get("estimatedPrice");
+    const coverageText = windowCount ? `${windowCount} window${Number(windowCount) > 1 ? "s" : ""}` : "custom coverage";
+
     quoteSummary.textContent =
-      `${year} ${make} ${model} — ${filmType} tint, ${data.get("shadeLevel")}, ${data.get("coverage")}. ` +
-      `We'll bring the van to ${address}.`;
+      `${year} ${make} ${model} — ${filmType || "tint"}, ${data.get("shadeLevel")}, ${coverageText}` +
+      `${estimatedPrice ? ` (${estimatedPrice})` : ""}. We'll bring the van to ${address}.`;
 
     const SEND_ATTEMPT_MS = 10000;
     const attemptStarted = Date.now();
@@ -404,8 +581,19 @@
     quoteForm.querySelectorAll(".field-invalid").forEach((f) => f.classList.remove("field-invalid"));
     quoteError.hidden = true;
     quoteSuccess.hidden = true;
-    quoteForm.hidden = false;
-    quoteForm.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    // Send them all the way back to the pricing calculator to start fresh.
+    document.querySelectorAll('input[name="pricingCategory"], input[name="pricingFilm"]').forEach((input) => {
+      input.checked = false;
+    });
+    pricingWindowOptions.innerHTML = "";
+    pricingStepFilm.hidden = true;
+    pricingStepWindows.hidden = true;
+    pricingStepCustom.hidden = true;
+    pricingResult.hidden = true;
+    pricingSummary.hidden = true;
+    quoteForm.hidden = true;
+    pricingCalculatorEl.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   /* ---------------------------------------------------------------------
