@@ -346,6 +346,26 @@ button { font: inherit; cursor: pointer; }
 .pricing-custom { background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface)); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 18px 20px; }
 .pricing-custom p { margin: 0; color: var(--color-text-soft); }
 
+.film-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; }
+.film-compare-card {
+  border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); padding: 18px 20px;
+  background: var(--color-surface); transition: border-color var(--transition), box-shadow var(--transition);
+}
+.film-compare-card.is-selected { border-color: var(--color-accent); box-shadow: 0 0 0 2px var(--color-accent); }
+.film-compare-card h4 { display: flex; align-items: center; gap: 8px; font-family: var(--font-heading); margin: 0 0 12px; font-size: 1rem; }
+.film-compare-tag {
+  font-size: 0.66rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent); color: var(--color-accent);
+}
+.film-compare-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; font-size: 0.87rem; }
+.film-compare-list li { position: relative; padding-left: 26px; color: var(--color-text-soft); line-height: 1.35; }
+.film-compare-list li.is-yes::before { content: "\2713"; position: absolute; left: 0; top: 0; color: #16A34A; font-weight: 700; }
+.film-compare-list li.is-no::before { content: "\2715"; position: absolute; left: 0; top: 0; color: var(--color-accent); font-weight: 700; }
+
+@media (max-width: 640px) {
+  .film-compare { grid-template-columns: 1fr; }
+}
+
 .pricing-window-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .pricing-window-pill { display: block; max-width: 230px; }
 .pricing-window-pill input { position: absolute; opacity: 0; pointer-events: none; }
@@ -361,11 +381,6 @@ button { font: inherit; cursor: pointer; }
 .pricing-window-pill input:focus-visible + span { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .pricing-window-pill:hover > span { border-color: var(--color-accent); transform: scale(1.04); }
 .pricing-window-pill:active > span { transform: scale(0.97); }
-.pricing-window-badge {
-  position: absolute; top: -10px; right: -8px; background: var(--color-accent); color: #fff;
-  font-size: 0.68rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap;
-  box-shadow: var(--shadow-sm); animation: pricingBadgePulse 1.8s ease-in-out infinite;
-}
 
 /* Tactile hover/press feedback on the vehicle-type and film-type pickers too */
 .tile--body > span { transition: transform 160ms ease, border-color var(--transition), box-shadow var(--transition), background var(--transition); }
@@ -393,7 +408,6 @@ button { font: inherit; cursor: pointer; }
 }
 .pricing-price-bump { animation: pricingPriceBump 400ms cubic-bezier(0.2, 0.9, 0.3, 1.3); }
 .pricing-result-note { color: var(--color-text-soft); font-size: 0.9rem; margin: 0 0 8px; }
-.pricing-savings { color: var(--color-accent); font-weight: 700; }
 
 @keyframes pricingPopIn {
   from { opacity: 0; transform: translateY(10px) scale(0.94); }
@@ -408,12 +422,8 @@ button { font: inherit; cursor: pointer; }
   35% { transform: scale(1.12); }
   100% { transform: scale(1); }
 }
-@keyframes pricingBadgePulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 55%, transparent); }
-  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-accent) 0%, transparent); }
-}
 @media (prefers-reduced-motion: reduce) {
-  .pricing-pop-in, .pricing-step:not([hidden]), .pricing-result:not([hidden]), .pricing-price-bump, .pricing-window-badge {
+  .pricing-pop-in, .pricing-step:not([hidden]), .pricing-result:not([hidden]), .pricing-price-bump {
     animation: none;
   }
   .tile--body > span, .pill span, .pricing-window-pill > span { transition: none; }

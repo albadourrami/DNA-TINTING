@@ -307,7 +307,7 @@
   const PRICING = {
     sedan: {
       label: "Sedan / Coupe",
-      Carbon: { perWindow: 47, bundle6: 275 },
+      Carbon: { perWindow: 50, bundle6: 275 },
       Ceramic: { perWindow: 85, bundle6: 499 },
     },
     suv_truck: {
@@ -328,10 +328,6 @@
   const pricingWindowPrice = (category, film, count) => {
     const rates = PRICING[category][film];
     return Math.round(count === 6 ? rates.bundle6 : rates.perWindow * count);
-  };
-  const pricingSavings = (category, film) => {
-    const rates = PRICING[category][film];
-    return Math.round(rates.perWindow * 6 - rates.bundle6);
   };
   const getCheckedValue = (name) => document.querySelector(`input[name="${name}"]:checked`)?.value || "";
 
@@ -356,7 +352,6 @@
 
   const renderWindowOptions = (category, film) => {
     const previouslySelected = getCheckedValue("pricingWindows");
-    const savings = pricingSavings(category, film);
     pricingWindowOptions.innerHTML = "";
     WINDOW_COUNTS.forEach(({ count, example }, index) => {
       const price = pricingWindowPrice(category, film, count);
@@ -371,12 +366,6 @@
       if (String(count) === previouslySelected) input.checked = true;
 
       const span = document.createElement("span");
-      if (count === 6 && savings >= 5) {
-        const badge = document.createElement("span");
-        badge.className = "pricing-window-badge";
-        badge.textContent = `Save $${savings}`;
-        span.appendChild(badge);
-      }
       const countSpan = document.createElement("span");
       countSpan.className = "pricing-window-count";
       countSpan.textContent = `${count} Window${count > 1 ? "s" : ""}`;
@@ -462,21 +451,27 @@
 
     const windowCount = Number(getCheckedValue("pricingWindows"));
     const price = pricingWindowPrice(category, film, windowCount);
-    const savings = pricingSavings(category, film);
     pricingResult.hidden = false;
     pricingResultLabel.textContent = `${PRICING[category].label} · ${film} · ${windowCount} Window${windowCount > 1 ? "s" : ""}`;
     animatePriceTo(pricingResultPrice, price);
-    pricingResultNote.innerHTML =
-      windowCount === 6 && savings >= 5
-        ? `Full-vehicle bundle price — <strong class="pricing-savings">you save $${savings}</strong> vs. per-window pricing!`
-        : windowCount === 6
+    pricingResultNote.textContent =
+      windowCount === 6
         ? "Full-vehicle bundle price — our best per-window value."
         : `${windowCount} window${windowCount > 1 ? "s" : ""} × ${formatPrice(PRICING[category][film].perWindow)} per window.`;
     pricingContinueBtn.textContent = "Book This Price";
   };
 
+  const filmCompareCards = document.querySelectorAll(".film-compare-card");
+  const updateFilmCompareHighlight = () => {
+    const film = getCheckedValue("pricingFilm");
+    filmCompareCards.forEach((card) => card.classList.toggle("is-selected", card.dataset.film === film));
+  };
+
   document.querySelectorAll('input[name="pricingCategory"], input[name="pricingFilm"]').forEach((input) => {
-    input.addEventListener("change", updatePricingResult);
+    input.addEventListener("change", () => {
+      updatePricingResult();
+      updateFilmCompareHighlight();
+    });
   });
   pricingWindowOptions.addEventListener("change", (event) => {
     if (event.target.name === "pricingWindows") updatePricingResult();
