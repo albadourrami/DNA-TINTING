@@ -350,25 +350,74 @@ button { font: inherit; cursor: pointer; }
 .pricing-window-pill { display: block; max-width: 230px; }
 .pricing-window-pill input { position: absolute; opacity: 0; pointer-events: none; }
 .pricing-window-pill > span {
-  display: flex; flex-direction: column; gap: 4px; padding: 0.85em 1.1em; border-radius: var(--radius-sm);
+  position: relative; display: flex; flex-direction: column; gap: 4px; padding: 0.85em 1.1em; border-radius: var(--radius-sm);
   border: 1.5px solid var(--color-border); background: var(--color-surface); cursor: pointer;
-  transition: all var(--transition);
+  transition: transform 160ms ease, border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 .pricing-window-pill .pricing-window-count { font-family: var(--font-heading); font-weight: 700; font-size: 0.95rem; }
 .pricing-window-pill .pricing-window-price { font-weight: 700; color: var(--color-accent); }
 .pricing-window-pill .pricing-window-example { font-size: 0.76rem; color: var(--color-text-soft); }
-.pricing-window-pill input:checked + span { border-color: var(--color-accent); box-shadow: 0 0 0 2px var(--color-accent); background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface)); }
+.pricing-window-pill input:checked + span { border-color: var(--color-accent); box-shadow: 0 0 0 2px var(--color-accent); background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface)); transform: scale(1.04); }
 .pricing-window-pill input:focus-visible + span { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.pricing-window-pill:hover > span { border-color: var(--color-accent); }
+.pricing-window-pill:hover > span { border-color: var(--color-accent); transform: scale(1.04); }
+.pricing-window-pill:active > span { transform: scale(0.97); }
+.pricing-window-badge {
+  position: absolute; top: -10px; right: -8px; background: var(--color-accent); color: #fff;
+  font-size: 0.68rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+  box-shadow: var(--shadow-sm); animation: pricingBadgePulse 1.8s ease-in-out infinite;
+}
+
+/* Tactile hover/press feedback on the vehicle-type and film-type pickers too */
+.tile--body > span { transition: transform 160ms ease, border-color var(--transition), box-shadow var(--transition), background var(--transition); }
+.tile--body:hover > span { transform: scale(1.03); }
+.tile--body:active > span { transform: scale(0.98); }
+.tile--body input:checked + span { transform: scale(1.03); }
+.pill span { transition: transform 160ms ease, background var(--transition), border-color var(--transition), color var(--transition); }
+.pill:hover span { transform: scale(1.05); }
+.pill:active span { transform: scale(0.96); }
+
+.pricing-pop-in { animation: pricingPopIn 340ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+
+.pricing-step:not([hidden]) { animation: pricingStepIn 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 
 .pricing-result {
   margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--color-border);
   display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
 }
+.pricing-result:not([hidden]) { animation: pricingStepIn 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 .pricing-result-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .pricing-result-label { font-family: var(--font-heading); font-weight: 600; color: var(--color-text-soft); }
-.pricing-result-price { font-family: var(--font-heading); font-weight: 800; font-size: 2rem; color: var(--color-text); }
+.pricing-result-price {
+  font-family: var(--font-heading); font-weight: 800; font-size: 2.2rem; color: var(--color-text);
+  font-variant-numeric: tabular-nums; display: inline-block;
+}
+.pricing-price-bump { animation: pricingPriceBump 400ms cubic-bezier(0.2, 0.9, 0.3, 1.3); }
 .pricing-result-note { color: var(--color-text-soft); font-size: 0.9rem; margin: 0 0 8px; }
+.pricing-savings { color: var(--color-accent); font-weight: 700; }
+
+@keyframes pricingPopIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes pricingStepIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pricingPriceBump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+@keyframes pricingBadgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 55%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-accent) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pricing-pop-in, .pricing-step:not([hidden]), .pricing-result:not([hidden]), .pricing-price-bump, .pricing-window-badge {
+    animation: none;
+  }
+  .tile--body > span, .pill span, .pricing-window-pill > span { transition: none; }
+}
 
 .pricing-summary { max-width: 860px; margin: 0 auto 20px; padding: 20px 28px; }
 .pricing-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }

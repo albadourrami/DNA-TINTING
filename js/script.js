@@ -307,13 +307,13 @@
   const PRICING = {
     sedan: {
       label: "Sedan / Coupe",
-      Carbon: { perWindow: 47.0, bundle6: 275.0 },
-      Ceramic: { perWindow: 85.0, bundle6: 499.0 },
+      Carbon: { perWindow: 47, bundle6: 275 },
+      Ceramic: { perWindow: 85, bundle6: 499 },
     },
     suv_truck: {
       label: "SUV / Truck",
-      Carbon: { perWindow: 49.99, bundle6: 299.0 },
-      Ceramic: { perWindow: 89.99, bundle6: 525.0 },
+      Carbon: { perWindow: 50, bundle6: 299 },
+      Ceramic: { perWindow: 90, bundle6: 525 },
     },
   };
   const WINDOW_COUNTS = [
@@ -324,10 +324,14 @@
     { count: 6, example: "Full vehicle — best value" },
   ];
 
-  const formatPrice = (n) => `$${n.toFixed(2)}`;
+  const formatPrice = (n) => `$${Math.round(n)}`;
   const pricingWindowPrice = (category, film, count) => {
     const rates = PRICING[category][film];
-    return count === 6 ? rates.bundle6 : rates.perWindow * count;
+    return Math.round(count === 6 ? rates.bundle6 : rates.perWindow * count);
+  };
+  const pricingSavings = (category, film) => {
+    const rates = PRICING[category][film];
+    return Math.round(rates.perWindow * 6 - rates.bundle6);
   };
   const getCheckedValue = (name) => document.querySelector(`input[name="${name}"]:checked`)?.value || "";
 
@@ -352,11 +356,13 @@
 
   const renderWindowOptions = (category, film) => {
     const previouslySelected = getCheckedValue("pricingWindows");
+    const savings = pricingSavings(category, film);
     pricingWindowOptions.innerHTML = "";
-    WINDOW_COUNTS.forEach(({ count, example }) => {
+    WINDOW_COUNTS.forEach(({ count, example }, index) => {
       const price = pricingWindowPrice(category, film, count);
       const label = document.createElement("label");
-      label.className = "pricing-window-pill";
+      label.className = "pricing-window-pill pricing-pop-in";
+      label.style.animationDelay = `${index * 45}ms`;
 
       const input = document.createElement("input");
       input.type = "radio";
@@ -365,6 +371,12 @@
       if (String(count) === previouslySelected) input.checked = true;
 
       const span = document.createElement("span");
+      if (count === 6 && savings >= 5) {
+        const badge = document.createElement("span");
+        badge.className = "pricing-window-badge";
+        badge.textContent = `Save $${savings}`;
+        span.appendChild(badge);
+      }
       const countSpan = document.createElement("span");
       countSpan.className = "pricing-window-count";
       countSpan.textContent = `${count} Window${count > 1 ? "s" : ""}`;
@@ -379,6 +391,34 @@
       label.append(input, span);
       pricingWindowOptions.appendChild(label);
     });
+  };
+
+  let priceAnimFrame = null;
+  let lastDisplayedPrice = null;
+  const animatePriceTo = (el, target, duration = 400) => {
+    if (priceAnimFrame) cancelAnimationFrame(priceAnimFrame);
+    const start = lastDisplayedPrice ?? 0;
+    lastDisplayedPrice = target;
+    el.classList.remove("pricing-price-bump");
+    void el.offsetWidth; // restart the bump animation even if it's already mid-flight
+    el.classList.add("pricing-price-bump");
+    if (start === target) {
+      el.textContent = formatPrice(target);
+      return;
+    }
+    const startTime = performance.now();
+    const easeOutCubic = (t) => 1 - (1 - t) ** 3;
+    const step = (now) => {
+      const t = Math.min(1, (now - startTime) / duration);
+      el.textContent = formatPrice(start + (target - start) * easeOutCubic(t));
+      if (t < 1) {
+        priceAnimFrame = requestAnimationFrame(step);
+      } else {
+        priceAnimFrame = null;
+        el.textContent = formatPrice(target);
+      }
+    };
+    priceAnimFrame = requestAnimationFrame(step);
   };
 
   const updatePricingResult = () => {
@@ -400,6 +440,7 @@
       pricingResult.hidden = false;
       pricingResultLabel.textContent = "Van / Other";
       pricingResultPrice.textContent = "Custom Quote";
+      lastDisplayedPrice = null;
       pricingResultNote.textContent = "We'll confirm exact pricing after a quick look at your vehicle's glass.";
       pricingContinueBtn.textContent = "Continue — Get My Custom Quote";
       return;
@@ -421,12 +462,15 @@
 
     const windowCount = Number(getCheckedValue("pricingWindows"));
     const price = pricingWindowPrice(category, film, windowCount);
+    const savings = pricingSavings(category, film);
     pricingResult.hidden = false;
     pricingResultLabel.textContent = `${PRICING[category].label} · ${film} · ${windowCount} Window${windowCount > 1 ? "s" : ""}`;
-    pricingResultPrice.textContent = formatPrice(price);
-    pricingResultNote.textContent =
-      windowCount === 6
-        ? "Full-vehicle bundle price — a discount over per-window pricing."
+    animatePriceTo(pricingResultPrice, price);
+    pricingResultNote.innerHTML =
+      windowCount === 6 && savings >= 5
+        ? `Full-vehicle bundle price — <strong class="pricing-savings">you save $${savings}</strong> vs. per-window pricing!`
+        : windowCount === 6
+        ? "Full-vehicle bundle price — our best per-window value."
         : `${windowCount} window${windowCount > 1 ? "s" : ""} × ${formatPrice(PRICING[category][film].perWindow)} per window.`;
     pricingContinueBtn.textContent = "Book This Price";
   };
@@ -592,6 +636,7 @@
     pricingStepCustom.hidden = true;
     pricingResult.hidden = true;
     pricingSummary.hidden = true;
+    lastDisplayedPrice = null;
     quoteForm.hidden = true;
     pricingCalculatorEl.scrollIntoView({ behavior: "smooth", block: "start" });
   });
