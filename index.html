@@ -211,14 +211,13 @@
             <span class="shade-readout-value" id="shadeValue">35% VLT</span>
             <span class="shade-readout-desc" id="shadeDesc">Most popular daily-driver shade</span>
           </div>
-          <input type="range" class="shade-slider" id="shadeSlider" min="5" max="70" step="1" value="35" aria-label="Drag to preview window tint darkness by VLT percentage">
+          <input type="range" class="shade-slider" id="shadeSlider" min="5" max="70" step="1" value="35" aria-label="Drag to preview window tint darkness. Snaps to the shades we offer: 5%, 20%, 35%, or 70% VLT">
           <div class="shade-slider-scale"><span>5% &mdash; darkest</span><span>70% &mdash; lightest</span></div>
-          <div class="shade-presets" role="group" aria-label="Common tint shades">
-            <button type="button" class="shade-preset" data-vlt="70">70%</button>
-            <button type="button" class="shade-preset" data-vlt="50">50%</button>
-            <button type="button" class="shade-preset is-active" data-vlt="35">35%</button>
-            <button type="button" class="shade-preset" data-vlt="20">20%</button>
+          <div class="shade-presets" role="group" aria-label="Shades we offer">
             <button type="button" class="shade-preset" data-vlt="5">5%</button>
+            <button type="button" class="shade-preset" data-vlt="20">20%</button>
+            <button type="button" class="shade-preset is-active" data-vlt="35">35%</button>
+            <button type="button" class="shade-preset" data-vlt="70">70%</button>
           </div>
         </div>
       </div>

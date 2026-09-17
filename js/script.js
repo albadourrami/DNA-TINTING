@@ -57,15 +57,66 @@
     shadePresets.forEach((btn) => btn.classList.toggle("is-active", Number(btn.dataset.vlt) === vlt));
   };
 
+  // The only VLT percentages we actually offer. The slider can be dragged
+  // to any value in between for feel, but always glides to the nearest of
+  // these on release, so it's clear those are the only real options.
+  const ALLOWED_SHADES = [5, 20, 35, 70];
+  const nearestAllowedShade = (vlt) =>
+    ALLOWED_SHADES.reduce((closest, v) => (Math.abs(v - vlt) < Math.abs(closest - vlt) ? v : closest));
+
+  let shadeGlideFrame = null;
+  const glideShadeTo = (target, duration = 260) => {
+    if (shadeGlideFrame) cancelAnimationFrame(shadeGlideFrame);
+    const start = Number(shadeSlider.value);
+    if (start === target) {
+      updateShadePreview(target);
+      return;
+    }
+    const startTime = performance.now();
+    const easeOutCubic = (t) => 1 - (1 - t) ** 3;
+    const step = (now) => {
+      const t = Math.min(1, (now - startTime) / duration);
+      const value = Math.round(start + (target - start) * easeOutCubic(t));
+      shadeSlider.value = String(value);
+      updateShadePreview(value);
+      if (t < 1) {
+        shadeGlideFrame = requestAnimationFrame(step);
+      } else {
+        shadeGlideFrame = null;
+      }
+    };
+    shadeGlideFrame = requestAnimationFrame(step);
+  };
+
   if (shadeSlider) {
     updateShadePreview(Number(shadeSlider.value));
+
+    // Live, unsnapped feedback while actively dragging or touching.
     shadeSlider.addEventListener("input", () => updateShadePreview(Number(shadeSlider.value)));
+
+    // On release (mouse, touch, or pointer), glide to the nearest shade we offer.
+    const commitNearestShade = () => glideShadeTo(nearestAllowedShade(Number(shadeSlider.value)));
+    shadeSlider.addEventListener("pointerup", commitNearestShade);
+    shadeSlider.addEventListener("pointercancel", commitNearestShade);
+    shadeSlider.addEventListener("touchend", commitNearestShade);
+    shadeSlider.addEventListener("mouseup", commitNearestShade);
+
+    // Keyboard: step directly between the shades we offer instead of by 1.
+    shadeSlider.addEventListener("keydown", (event) => {
+      const currentIndex = ALLOWED_SHADES.indexOf(nearestAllowedShade(Number(shadeSlider.value)));
+      let nextIndex;
+      if (event.key === "ArrowRight" || event.key === "ArrowUp") nextIndex = currentIndex + 1;
+      else if (event.key === "ArrowLeft" || event.key === "ArrowDown") nextIndex = currentIndex - 1;
+      else if (event.key === "Home") nextIndex = 0;
+      else if (event.key === "End") nextIndex = ALLOWED_SHADES.length - 1;
+      else return;
+      event.preventDefault();
+      nextIndex = Math.min(ALLOWED_SHADES.length - 1, Math.max(0, nextIndex));
+      glideShadeTo(ALLOWED_SHADES[nextIndex]);
+    });
+
     shadePresets.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const vlt = Number(btn.dataset.vlt);
-        shadeSlider.value = String(vlt);
-        updateShadePreview(vlt);
-      });
+      btn.addEventListener("click", () => glideShadeTo(Number(btn.dataset.vlt)));
     });
   }
 
