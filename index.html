@@ -32,8 +32,8 @@
 
     <nav class="main-nav" id="mainNav" aria-label="Primary">
       <ul>
-        <li><a href="#services">Services</a></li>
         <li><a href="#shades">Shades</a></li>
+        <li><a href="#services">Services</a></li>
         <li><a href="#get-started">Get Started</a></li>
         <li><a href="#gallery">Gallery</a></li>
         <li><a href="#why-us">Why Us</a></li>
@@ -124,6 +124,41 @@
     </div>
   </div>
 
+  <!-- ===== Shade Selector ===== -->
+  <section class="section section-muted" id="shades">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <p class="kicker">Choose Your Shade</p>
+        <h2>From subtle to blacked-out, dialed to your state&rsquo;s legal limit.</h2>
+        <p class="section-lead">VLT (Visible Light Transmission) is the percentage of light let through your glass. Drag the slider or tap a shade below to see it applied to the car in real time &mdash; lower numbers mean darker tint. We&rsquo;ll always confirm your local legal limits before install.</p>
+      </div>
+
+      <div class="shade-interactive" data-reveal>
+        <div class="shade-car-stage">
+          <div class="shade-car-frame">
+            <img src="assets/shade-car.png" alt="Sedan preview showing the selected window tint darkness" class="shade-car-photo">
+            <div id="shadeTintOverlay" class="shade-tint-overlay" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <div class="shade-controls">
+          <div class="shade-readout">
+            <span class="shade-readout-value" id="shadeValue">35% VLT</span>
+            <span class="shade-readout-desc" id="shadeDesc">Most popular daily-driver shade</span>
+          </div>
+          <input type="range" class="shade-slider" id="shadeSlider" min="5" max="70" step="1" value="35" aria-label="Drag to preview window tint darkness. Snaps to the shades we offer: 5%, 20%, 35%, or 70% VLT">
+          <div class="shade-slider-scale"><span>5% &mdash; darkest</span><span>70% &mdash; lightest</span></div>
+          <div class="shade-presets" role="group" aria-label="Shades we offer">
+            <button type="button" class="shade-preset" data-vlt="5">5%</button>
+            <button type="button" class="shade-preset" data-vlt="20">20%</button>
+            <button type="button" class="shade-preset is-active" data-vlt="35">35%</button>
+            <button type="button" class="shade-preset" data-vlt="70">70%</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== Services ===== -->
   <section class="section" id="services">
     <div class="container">
@@ -185,41 +220,6 @@
             <li>Flexible on-site scheduling</li>
           </ul>
         </article>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Shade Selector ===== -->
-  <section class="section section-muted" id="shades">
-    <div class="container">
-      <div class="section-head" data-reveal>
-        <p class="kicker">Choose Your Shade</p>
-        <h2>From subtle to blacked-out, dialed to your state&rsquo;s legal limit.</h2>
-        <p class="section-lead">VLT (Visible Light Transmission) is the percentage of light let through your glass. Drag the slider or tap a shade below to see it applied to the car in real time &mdash; lower numbers mean darker tint. We&rsquo;ll always confirm your local legal limits before install.</p>
-      </div>
-
-      <div class="shade-interactive" data-reveal>
-        <div class="shade-car-stage">
-          <div class="shade-car-frame">
-            <img src="assets/shade-car.png" alt="Sedan preview showing the selected window tint darkness" class="shade-car-photo">
-            <div id="shadeTintOverlay" class="shade-tint-overlay" aria-hidden="true"></div>
-          </div>
-        </div>
-
-        <div class="shade-controls">
-          <div class="shade-readout">
-            <span class="shade-readout-value" id="shadeValue">35% VLT</span>
-            <span class="shade-readout-desc" id="shadeDesc">Most popular daily-driver shade</span>
-          </div>
-          <input type="range" class="shade-slider" id="shadeSlider" min="5" max="70" step="1" value="35" aria-label="Drag to preview window tint darkness. Snaps to the shades we offer: 5%, 20%, 35%, or 70% VLT">
-          <div class="shade-slider-scale"><span>5% &mdash; darkest</span><span>70% &mdash; lightest</span></div>
-          <div class="shade-presets" role="group" aria-label="Shades we offer">
-            <button type="button" class="shade-preset" data-vlt="5">5%</button>
-            <button type="button" class="shade-preset" data-vlt="20">20%</button>
-            <button type="button" class="shade-preset is-active" data-vlt="35">35%</button>
-            <button type="button" class="shade-preset" data-vlt="70">70%</button>
-          </div>
-        </div>
       </div>
     </div>
   </section>
@@ -687,8 +687,8 @@
     <div class="footer-col">
       <h4>Quick Links</h4>
       <ul>
-        <li><a href="#services">Services</a></li>
         <li><a href="#shades">Shades</a></li>
+        <li><a href="#services">Services</a></li>
         <li><a href="#service-area">Service Area</a></li>
         <li><a href="#gallery">Gallery</a></li>
         <li><a href="#why-us">Why Us</a></li>
