@@ -454,6 +454,7 @@ button { font: inherit; cursor: pointer; }
 .form-grid .field { margin-bottom: 0; }
 #vehicle-fields { scroll-margin-top: 110px; }
 #pricing-calculator { scroll-margin-top: 110px; }
+#shades { scroll-margin-top: 90px; }
 .field-label, .field label { font-family: var(--font-heading); font-weight: 600; font-size: 0.88rem; color: var(--color-text); }
 
 input[type="text"], input[type="tel"], input[type="email"], select, textarea {
