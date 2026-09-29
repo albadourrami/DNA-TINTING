@@ -9,10 +9,16 @@
   const QUOTE_NOTIFY_EMAILS = ["albadourrami@gmail.com"];
 
   /* ---------------------------------------------------------------------
-     Sticky header
+     Sticky header + scroll progress bar
      --------------------------------------------------------------------- */
   const header = document.getElementById("siteHeader");
-  const onScroll = () => header.classList.toggle("is-scrolled", window.scrollY > 40);
+  const scrollProgress = document.getElementById("scrollProgress");
+  const onScroll = () => {
+    header.classList.toggle("is-scrolled", window.scrollY > 40);
+    const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = scrollable > 0 ? Math.min(100, (window.scrollY / scrollable) * 100) : 0;
+    scrollProgress.style.width = `${pct}%`;
+  };
   onScroll();
   window.addEventListener("scroll", onScroll, { passive: true });
 
@@ -31,6 +37,53 @@
       navToggle.setAttribute("aria-expanded", "false");
     });
   });
+
+  /* ---------------------------------------------------------------------
+     Scrollspy: highlight the nav link for the section currently in view
+     --------------------------------------------------------------------- */
+  const navLinks = Array.from(mainNav.querySelectorAll('a[href^="#"]'));
+  const spySections = navLinks
+    .map((link) => document.getElementById(link.getAttribute("href").slice(1)))
+    .filter(Boolean);
+  if ("IntersectionObserver" in window && spySections.length) {
+    const setActiveLink = (id) => {
+      navLinks.forEach((link) => link.classList.toggle("is-active", link.getAttribute("href") === `#${id}`));
+    };
+    const spyObserver = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible.length) setActiveLink(visible[0].target.id);
+      },
+      { rootMargin: "-45% 0px -45% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
+    );
+    spySections.forEach((section) => spyObserver.observe(section));
+  }
+
+  /* ---------------------------------------------------------------------
+     Hero parallax: glow blobs + car drift gently toward the cursor
+     --------------------------------------------------------------------- */
+  const heroSection = document.getElementById("top");
+  if (heroSection && window.matchMedia("(pointer: fine)").matches && !prefersReducedMotionInit()) {
+    let heroParallaxFrame = null;
+    heroSection.addEventListener("mousemove", (event) => {
+      if (heroParallaxFrame) return;
+      heroParallaxFrame = requestAnimationFrame(() => {
+        const rect = heroSection.getBoundingClientRect();
+        const relX = (event.clientX - rect.left) / rect.width - 0.5;
+        const relY = (event.clientY - rect.top) / rect.height - 0.5;
+        heroSection.style.setProperty("--mx", String(relX * 28));
+        heroSection.style.setProperty("--my", String(relY * 20));
+        heroParallaxFrame = null;
+      });
+    });
+    heroSection.addEventListener("mouseleave", () => {
+      heroSection.style.setProperty("--mx", "0");
+      heroSection.style.setProperty("--my", "0");
+    });
+  }
+  function prefersReducedMotionInit() {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
 
   /* ---------------------------------------------------------------------
      Interactive shade preview: slider + presets tint the car's windows live
