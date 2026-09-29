@@ -498,16 +498,31 @@
           </div>
         </div>
 
-        <div class="pricing-step" id="pricingStepFilm" hidden>
-          <span class="field-label">2. Film Type</span>
-          <div class="pill-options" role="radiogroup" aria-label="Film type for pricing">
-            <label class="pill"><input type="radio" name="pricingFilm" value="Carbon"><span>Carbon</span></label>
-            <label class="pill"><input type="radio" name="pricingFilm" value="Ceramic"><span>Ceramic</span></label>
-          </div>
+        <div class="pricing-step" id="pricingStepWindows" hidden>
+          <span class="field-label">2. Number of Windows</span>
+          <p class="pricing-step-note">Every quote starts with our durable Carbon film &mdash; priced below.</p>
+          <div class="pricing-window-options" id="pricingWindowOptions" role="radiogroup" aria-label="Number of windows"></div>
+        </div>
+
+        <div class="pricing-step pricing-custom" id="pricingStepCustom" hidden>
+          <p>Vans, box trucks &amp; specialty vehicles vary too much for instant pricing. Tell us about yours below and we&rsquo;ll text or call you a custom quote &mdash; still 100% mobile.</p>
+        </div>
+
+        <div class="pricing-step" id="pricingStepUpgrade" hidden>
+          <span class="field-label">3. Want the upgrade?</span>
+
+          <label class="ceramic-toggle" id="ceramicToggleLabel">
+            <input type="checkbox" id="ceramicUpgradeToggle">
+            <span class="ceramic-toggle-switch" aria-hidden="true"></span>
+            <span class="ceramic-toggle-copy">
+              <strong>Upgrade to Ceramic</strong>
+              <span>Our best heat rejection &amp; clarity &mdash; add <span id="ceramicUpgradeAmount">$100</span> to your total</span>
+            </span>
+          </label>
 
           <div class="film-compare">
-            <div class="film-compare-card" data-film="Ceramic">
-              <h4>Ceramic <span class="film-compare-tag">Premium</span></h4>
+            <div class="film-compare-card film-compare-card--featured" data-film="Ceramic">
+              <h4>Ceramic <span class="film-compare-tag">Recommended</span></h4>
               <ul class="film-compare-list">
                 <li class="is-yes">Blocks up to 99% of UV rays</li>
                 <li class="is-yes">Best-in-class heat rejection &mdash; noticeably cooler cabin</li>
@@ -517,7 +532,7 @@
               </ul>
             </div>
             <div class="film-compare-card" data-film="Carbon">
-              <h4>Carbon <span class="film-compare-tag">Value</span></h4>
+              <h4>Carbon <span class="film-compare-tag">Included</span></h4>
               <ul class="film-compare-list">
                 <li class="is-yes">Blocks up to 99% of UV rays</li>
                 <li class="is-yes">Won&rsquo;t fade or turn purple over time</li>
@@ -527,15 +542,6 @@
               </ul>
             </div>
           </div>
-        </div>
-
-        <div class="pricing-step" id="pricingStepWindows" hidden>
-          <span class="field-label">3. Number of Windows</span>
-          <div class="pricing-window-options" id="pricingWindowOptions" role="radiogroup" aria-label="Number of windows"></div>
-        </div>
-
-        <div class="pricing-step pricing-custom" id="pricingStepCustom" hidden>
-          <p>Vans, box trucks &amp; specialty vehicles vary too much for instant pricing. Tell us about yours below and we&rsquo;ll text or call you a custom quote &mdash; still 100% mobile.</p>
         </div>
 
         <div class="pricing-result" id="pricingResult" role="status" hidden>
