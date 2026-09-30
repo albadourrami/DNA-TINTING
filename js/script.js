@@ -86,13 +86,16 @@
   }
 
   /* ---------------------------------------------------------------------
-     Interactive shade preview: slider + presets tint the car's windows live
+     Shade slider (inside the Tint Studio). It owns the VLT value and broadcasts
+     every change as a "dna:shade" event; js/tint-studio/main.js listens and
+     tints the 3D car's glass. `committed` is true once it settles on a shade
+     we actually offer.
      --------------------------------------------------------------------- */
   const shadeSlider = document.getElementById("shadeSlider");
   const shadeValue = document.getElementById("shadeValue");
   const shadeDesc = document.getElementById("shadeDesc");
-  const shadeTintOverlay = document.getElementById("shadeTintOverlay");
   const shadePresets = document.querySelectorAll(".shade-preset");
+  const shadeLevelSelect = document.getElementById("shadeLevel");
 
   const shadeDescriptionFor = (vlt) => {
     if (vlt >= 60) return "Light — near factory glass";
@@ -102,12 +105,17 @@
     return "Limo black — maximum privacy";
   };
 
-  const updateShadePreview = (vlt) => {
-    const opacity = 0.9 - ((vlt - 5) / 65) * 0.84;
-    shadeTintOverlay.style.opacity = opacity.toFixed(2);
+  const updateShadePreview = (vlt, committed = false) => {
     shadeValue.textContent = `${vlt}% VLT`;
     shadeDesc.textContent = shadeDescriptionFor(vlt);
     shadePresets.forEach((btn) => btn.classList.toggle("is-active", Number(btn.dataset.vlt) === vlt));
+    window.dnaShade = vlt;
+    document.dispatchEvent(new CustomEvent("dna:shade", { detail: { vlt, committed } }));
+    if (committed && shadeLevelSelect) {
+      // Keep the booking form's "Preferred Shade" in step with the studio.
+      const match = Array.from(shadeLevelSelect.options).find((o) => o.text.startsWith(`${vlt}% VLT`));
+      if (match) shadeLevelSelect.value = match.value;
+    }
   };
 
   // The only VLT percentages we actually offer. The slider can be dragged
@@ -122,7 +130,7 @@
     if (shadeGlideFrame) cancelAnimationFrame(shadeGlideFrame);
     const start = Number(shadeSlider.value);
     if (start === target) {
-      updateShadePreview(target);
+      updateShadePreview(target, true);
       return;
     }
     const startTime = performance.now();
@@ -131,7 +139,7 @@
       const t = Math.min(1, (now - startTime) / duration);
       const value = Math.round(start + (target - start) * easeOutCubic(t));
       shadeSlider.value = String(value);
-      updateShadePreview(value);
+      updateShadePreview(value, t >= 1);
       if (t < 1) {
         shadeGlideFrame = requestAnimationFrame(step);
       } else {
@@ -142,7 +150,7 @@
   };
 
   if (shadeSlider) {
-    updateShadePreview(Number(shadeSlider.value));
+    updateShadePreview(Number(shadeSlider.value), true);
 
     // Live, unsnapped feedback while actively dragging or touching.
     shadeSlider.addEventListener("input", () => updateShadePreview(Number(shadeSlider.value)));
@@ -171,21 +179,6 @@
     shadePresets.forEach((btn) => {
       btn.addEventListener("click", () => glideShadeTo(Number(btn.dataset.vlt)));
     });
-  }
-
-  /* ---------------------------------------------------------------------
-     Jump straight to the pricing calculator and focus the first option
-     --------------------------------------------------------------------- */
-  const pricingCalculatorEl = document.getElementById("pricing-calculator");
-  const focusPricingCategory = () => {
-    const firstTile = document.querySelector('input[name="pricingCategory"]');
-    if (firstTile) firstTile.focus({ preventScroll: true });
-  };
-  document.querySelectorAll('a[href="#pricing-calculator"]').forEach((link) => {
-    link.addEventListener("click", () => window.setTimeout(focusPricingCategory, 500));
-  });
-  if (window.location.hash === "#pricing-calculator" && pricingCalculatorEl) {
-    window.setTimeout(focusPricingCategory, 500);
   }
 
   /* ---------------------------------------------------------------------
@@ -354,41 +347,11 @@
   const quoteSubmitBtn = quoteForm.querySelector('button[type="submit"]');
 
   /* ---------------------------------------------------------------------
-     Pricing calculator: every quote starts with Carbon film, priced by
-     vehicle type and window count, with an optional flat-fee Ceramic
-     upgrade — then hands off into the booking form above.
+     Booking hand-off: the Tint Studio (js/tint-studio/main.js) prices the
+     job and fires "dna:book" with the selection; this fills the hidden form
+     fields, shows the summary, and reveals the booking form.
      --------------------------------------------------------------------- */
-  const PRICING = {
-    sedan: { label: "Sedan / Coupe", carbon: { perWindow: 50, bundle6: 275 } },
-    suv_truck: { label: "SUV / Truck", carbon: { perWindow: 50, bundle6: 299 } },
-  };
-  const CERAMIC_UPGRADE = { perWindow: 20, bundle6: 100 };
-  const WINDOW_COUNTS = [
-    { count: 2, example: "e.g. both front doors" },
-    { count: 3, example: "e.g. front doors + windshield strip" },
-    { count: 4, example: "e.g. all four doors" },
-    { count: 5, example: "e.g. four doors + rear glass" },
-    { count: 6, example: "Full vehicle — best value" },
-  ];
-
-  const formatPrice = (n) => `$${Math.round(n)}`;
-  const carbonPrice = (category, count) => {
-    const rates = PRICING[category].carbon;
-    return Math.round(count === 6 ? rates.bundle6 : rates.perWindow * count);
-  };
-  const ceramicUpgradePrice = (count) =>
-    Math.round(count === 6 ? CERAMIC_UPGRADE.bundle6 : CERAMIC_UPGRADE.perWindow * count);
-  const getCheckedValue = (name) => document.querySelector(`input[name="${name}"]:checked`)?.value || "";
-
-  const pricingStepWindows = document.getElementById("pricingStepWindows");
-  const pricingStepUpgrade = document.getElementById("pricingStepUpgrade");
-  const pricingStepCustom = document.getElementById("pricingStepCustom");
-  const pricingWindowOptions = document.getElementById("pricingWindowOptions");
-  const pricingResult = document.getElementById("pricingResult");
-  const pricingResultLabel = document.getElementById("pricingResultLabel");
-  const pricingResultPrice = document.getElementById("pricingResultPrice");
-  const pricingResultNote = document.getElementById("pricingResultNote");
-  const pricingContinueBtn = document.getElementById("pricingContinueBtn");
+  const quoteStart = document.getElementById("quoteStart");
   const pricingSummary = document.getElementById("pricingSummary");
   const pricingSummaryCategory = document.getElementById("pricingSummaryCategory");
   const pricingSummaryDetail = document.getElementById("pricingSummaryDetail");
@@ -397,180 +360,32 @@
   const pricingVehicleTypeField = document.getElementById("pricingVehicleType");
   const pricingFilmTypeField = document.getElementById("pricingFilmTypeField");
   const pricingWindowCountField = document.getElementById("pricingWindowCountField");
+  const pricingWindowsSelectedField = document.getElementById("pricingWindowsSelectedField");
   const pricingEstimatedPriceField = document.getElementById("pricingEstimatedPriceField");
-  const ceramicUpgradeToggle = document.getElementById("ceramicUpgradeToggle");
-  const ceramicToggleLabel = document.getElementById("ceramicToggleLabel");
-  const ceramicUpgradeAmount = document.getElementById("ceramicUpgradeAmount");
+  const studioSection = document.getElementById("tint-studio");
 
-  const renderWindowOptions = (category) => {
-    const previouslySelected = getCheckedValue("pricingWindows");
-    pricingWindowOptions.innerHTML = "";
-    WINDOW_COUNTS.forEach(({ count, example }, index) => {
-      const price = carbonPrice(category, count);
-      const label = document.createElement("label");
-      label.className = "pricing-window-pill pricing-pop-in";
-      label.style.animationDelay = `${index * 45}ms`;
+  const revealBookingForm = (booking) => {
+    pricingVehicleTypeField.value = booking.vehicleType;
+    pricingFilmTypeField.value = booking.filmType || "";
+    pricingWindowCountField.value = booking.windowCount ? String(booking.windowCount) : "";
+    pricingWindowsSelectedField.value = booking.windowsSelected || "";
+    pricingEstimatedPriceField.value = booking.estimatedPrice;
+    pricingSummaryCategory.textContent = booking.summaryTitle;
+    pricingSummaryDetail.textContent = booking.summaryDetail;
+    pricingSummaryPrice.textContent = booking.estimatedPrice;
 
-      const input = document.createElement("input");
-      input.type = "radio";
-      input.name = "pricingWindows";
-      input.value = String(count);
-      if (String(count) === previouslySelected) input.checked = true;
-
-      const span = document.createElement("span");
-      const countSpan = document.createElement("span");
-      countSpan.className = "pricing-window-count";
-      countSpan.textContent = `${count} Window${count > 1 ? "s" : ""}`;
-      const priceSpan = document.createElement("span");
-      priceSpan.className = "pricing-window-price";
-      priceSpan.textContent = formatPrice(price);
-      const exampleSpan = document.createElement("span");
-      exampleSpan.className = "pricing-window-example";
-      exampleSpan.textContent = example;
-      span.append(countSpan, priceSpan, exampleSpan);
-
-      label.append(input, span);
-      pricingWindowOptions.appendChild(label);
-    });
-  };
-
-  let priceAnimFrame = null;
-  let lastDisplayedPrice = null;
-  const animatePriceTo = (el, target, duration = 400) => {
-    if (priceAnimFrame) cancelAnimationFrame(priceAnimFrame);
-    const start = lastDisplayedPrice ?? 0;
-    lastDisplayedPrice = target;
-    el.classList.remove("pricing-price-bump");
-    void el.offsetWidth; // restart the bump animation even if it's already mid-flight
-    el.classList.add("pricing-price-bump");
-    if (start === target) {
-      el.textContent = formatPrice(target);
-      return;
-    }
-    const startTime = performance.now();
-    const easeOutCubic = (t) => 1 - (1 - t) ** 3;
-    const step = (now) => {
-      const t = Math.min(1, (now - startTime) / duration);
-      el.textContent = formatPrice(start + (target - start) * easeOutCubic(t));
-      if (t < 1) {
-        priceAnimFrame = requestAnimationFrame(step);
-      } else {
-        priceAnimFrame = null;
-        el.textContent = formatPrice(target);
-      }
-    };
-    priceAnimFrame = requestAnimationFrame(step);
-  };
-
-  const updatePricingResult = () => {
-    const category = getCheckedValue("pricingCategory");
-    const windowCountStr = getCheckedValue("pricingWindows");
-
-    pricingStepCustom.hidden = category !== "van_other";
-
-    if (!category) {
-      pricingStepWindows.hidden = true;
-      pricingStepUpgrade.hidden = true;
-      pricingResult.hidden = true;
-      return;
-    }
-
-    if (category === "van_other") {
-      pricingStepWindows.hidden = true;
-      pricingStepUpgrade.hidden = true;
-      pricingResult.hidden = false;
-      pricingResultLabel.textContent = "Van / Other";
-      pricingResultPrice.textContent = "Custom Quote";
-      lastDisplayedPrice = null;
-      pricingResultNote.textContent = "We'll confirm exact pricing after a quick look at your vehicle's glass.";
-      pricingContinueBtn.textContent = "Continue — Get My Custom Quote";
-      return;
-    }
-
-    pricingStepWindows.hidden = false;
-    renderWindowOptions(category);
-
-    if (!getCheckedValue("pricingWindows")) {
-      pricingStepUpgrade.hidden = true;
-      pricingResult.hidden = true;
-      return;
-    }
-
-    const windowCount = Number(getCheckedValue("pricingWindows"));
-    const base = carbonPrice(category, windowCount);
-    const upgrade = ceramicUpgradePrice(windowCount);
-    const isCeramic = ceramicUpgradeToggle.checked;
-    const price = isCeramic ? base + upgrade : base;
-
-    pricingStepUpgrade.hidden = false;
-    ceramicUpgradeAmount.textContent = formatPrice(upgrade);
-
-    pricingResult.hidden = false;
-    pricingResultLabel.textContent =
-      `${PRICING[category].label} · ${isCeramic ? "Carbon + Ceramic Upgrade" : "Carbon"} · ${windowCount} Window${windowCount > 1 ? "s" : ""}`;
-    animatePriceTo(pricingResultPrice, price);
-    pricingResultNote.textContent = isCeramic
-      ? `${formatPrice(base)} Carbon base + ${formatPrice(upgrade)} Ceramic upgrade.`
-      : windowCount === 6
-      ? "Full-vehicle bundle price — our best per-window value."
-      : `${windowCount} window${windowCount > 1 ? "s" : ""} × ${formatPrice(PRICING[category].carbon.perWindow)} per window.`;
-    pricingContinueBtn.textContent = "Book This Price";
-  };
-
-  const filmCompareCards = document.querySelectorAll(".film-compare-card");
-  const updateFilmCompareHighlight = () => {
-    const isCeramic = ceramicUpgradeToggle.checked;
-    filmCompareCards.forEach((card) => card.classList.toggle("is-selected", card.dataset.film === (isCeramic ? "Ceramic" : "Carbon")));
-    ceramicToggleLabel.classList.toggle("is-checked", isCeramic);
-  };
-
-  document.querySelectorAll('input[name="pricingCategory"]').forEach((input) => {
-    input.addEventListener("change", updatePricingResult);
-  });
-  pricingWindowOptions.addEventListener("change", (event) => {
-    if (event.target.name === "pricingWindows") updatePricingResult();
-  });
-  ceramicUpgradeToggle.addEventListener("change", () => {
-    updatePricingResult();
-    updateFilmCompareHighlight();
-  });
-  updateFilmCompareHighlight();
-
-  const revealBookingForm = () => {
-    const category = getCheckedValue("pricingCategory");
-    const windowCountStr = getCheckedValue("pricingWindows");
-
-    if (category === "van_other") {
-      pricingVehicleTypeField.value = "Van / Other (Custom Quote)";
-      pricingFilmTypeField.value = "";
-      pricingWindowCountField.value = "";
-      pricingEstimatedPriceField.value = "Custom Quote";
-      pricingSummaryCategory.textContent = "Van / Other";
-      pricingSummaryDetail.textContent = " — Custom Quote";
-      pricingSummaryPrice.textContent = "Custom Quote";
-    } else {
-      const windowCount = Number(windowCountStr);
-      const isCeramic = ceramicUpgradeToggle.checked;
-      const base = carbonPrice(category, windowCount);
-      const price = isCeramic ? base + ceramicUpgradePrice(windowCount) : base;
-      const filmLabel = isCeramic ? "Ceramic" : "Carbon";
-      pricingVehicleTypeField.value = PRICING[category].label;
-      pricingFilmTypeField.value = filmLabel;
-      pricingWindowCountField.value = windowCountStr;
-      pricingEstimatedPriceField.value = formatPrice(price);
-      pricingSummaryCategory.textContent = PRICING[category].label;
-      pricingSummaryDetail.textContent = ` — ${filmLabel}, ${windowCount} Window${windowCount > 1 ? "s" : ""}`;
-      pricingSummaryPrice.textContent = formatPrice(price);
-    }
-
+    quoteStart.hidden = true;
     pricingSummary.hidden = false;
     quoteForm.hidden = false;
     quoteForm.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  pricingContinueBtn.addEventListener("click", revealBookingForm);
+  document.addEventListener("dna:book", (event) => revealBookingForm(event.detail));
+  document.getElementById("quoteStartCustom").addEventListener("click", () => {
+    document.dispatchEvent(new CustomEvent("dna:custom-quote"));
+  });
   pricingEditBtn.addEventListener("click", () => {
-    pricingCalculatorEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    studioSection.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   const [notifyPrimary, ...notifyCc] = QUOTE_NOTIFY_EMAILS;
@@ -610,7 +425,10 @@
 
     const windowCount = data.get("windowCount");
     const estimatedPrice = data.get("estimatedPrice");
-    const coverageText = windowCount ? `${windowCount} window${Number(windowCount) > 1 ? "s" : ""}` : "custom coverage";
+    const windowsSelected = data.get("windowsSelected");
+    const coverageText = windowCount
+      ? `${windowCount} window${Number(windowCount) > 1 ? "s" : ""}${windowsSelected ? ` (${windowsSelected})` : ""}`
+      : "custom coverage";
 
     quoteSummary.textContent =
       `${year} ${make} ${model} — ${filmType || "tint"}, ${data.get("shadeLevel")}, ${coverageText}` +
@@ -682,21 +500,13 @@
     quoteError.hidden = true;
     quoteSuccess.hidden = true;
 
-    // Send them all the way back to the pricing calculator to start fresh.
-    document.querySelectorAll('input[name="pricingCategory"]').forEach((input) => {
-      input.checked = false;
-    });
-    ceramicUpgradeToggle.checked = false;
-    updateFilmCompareHighlight();
-    pricingWindowOptions.innerHTML = "";
-    pricingStepWindows.hidden = true;
-    pricingStepUpgrade.hidden = true;
-    pricingStepCustom.hidden = true;
-    pricingResult.hidden = true;
+    // Send them all the way back to the Tint Studio to start fresh.
     pricingSummary.hidden = true;
-    lastDisplayedPrice = null;
     quoteForm.hidden = true;
-    pricingCalculatorEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    quoteStart.hidden = false;
+    document.dispatchEvent(new CustomEvent("dna:quote-reset"));
+    glideShadeTo(35);
+    studioSection.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   /* ---------------------------------------------------------------------

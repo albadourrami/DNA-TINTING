@@ -18,6 +18,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Rubik:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<link rel="preload" href="assets/vehicles/concept-demo/poster.webp" as="image" fetchpriority="low">
+<!-- three.js for the Tint Studio. Pinned: core, addons and decoders must be the same release.
+     Nothing here downloads until the studio scrolls near the viewport (js/tint-studio/main.js). -->
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+    }
+  }
+</script>
 </head>
 <body>
 
@@ -34,7 +45,7 @@
 
     <nav class="main-nav" id="mainNav" aria-label="Primary">
       <ul>
-        <li><a href="#shades">Shades</a></li>
+        <li><a href="#tint-studio">Tint Studio</a></li>
         <li><a href="#services">Services</a></li>
         <li><a href="#get-started">Get Started</a></li>
         <li><a href="#gallery">Gallery</a></li>
@@ -48,7 +59,7 @@
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         <span aria-hidden="true">(419) 309-7116</span>
       </a>
-      <a href="#pricing-calculator" class="btn btn-primary btn-sm">Find My Pricing</a>
+      <a href="#tint-price" class="btn btn-primary btn-sm">Find My Pricing</a>
       <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="mainNav">
         <span></span><span></span><span></span>
       </button>
@@ -135,8 +146,11 @@
       <p class="hero-area">&#128205; Now Booking &mdash; Toledo, OH &amp; Surrounding Areas</p>
       <p class="hero-lead">Ceramic and carbon films, laser-precision installs, and a lifetime warranty &mdash; done in our mobile rig at your home, office, or job site. No shop visit required.</p>
       <div class="hero-cta">
-        <a href="#shades" class="btn btn-primary btn-lg">See Tint Percentages</a>
-        <a href="#pricing-calculator" class="btn btn-outline-light btn-lg">Find My Pricing</a>
+        <a href="#tint-studio" class="btn btn-primary btn-lg btn-select-tint">
+          Select My Tint
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a href="#tint-price" class="btn btn-outline-light btn-lg">Find My Pricing</a>
       </div>
       <ul class="hero-badges">
         <li><strong>100%</strong><span>Mobile Service</span></li>
@@ -144,6 +158,154 @@
         <li><strong>Toledo</strong><span>&amp; Nearby Areas</span></li>
         <li><strong>Lifetime</strong><span>Warranty</span></li>
       </ul>
+    </div>
+  </section>
+
+  <!-- ===== Tint Studio: 3D vehicle configurator =====
+       Markup + pricing UI work without WebGL; js/tint-studio/main.js adds the 3D car.
+       Vehicles live in js/tint-studio/vehicles/. -->
+  <section class="studio" id="tint-studio" aria-labelledby="studioTitle">
+    <div class="container">
+      <div class="studio-head">
+        <p class="kicker">Tint Studio</p>
+        <h2 id="studioTitle">See your tint on the car before we ever show up.</h2>
+        <p class="section-lead">Pick a vehicle, slide to your shade, and tap the windows you want tinted. Your price updates as you go.</p>
+      </div>
+
+      <div class="studio-layout">
+        <div class="studio-stage-col">
+          <div class="studio-stage" id="studioStage">
+            <img class="studio-poster" id="studioPoster" src="assets/vehicles/concept-demo/poster.webp" alt="3D preview of a car with tinted windows" width="1600" height="1000" decoding="async">
+            <img class="studio-photo" id="studioPhoto" alt="" hidden>
+            <div class="studio-loading" id="studioLoading" role="status" hidden>
+              <div class="studio-progress" aria-hidden="true"><span id="studioProgressBar"></span></div>
+              <p id="studioLoadingText">Loading 3D studio&hellip;</p>
+            </div>
+            <div class="studio-note" id="studioNote" role="status" hidden></div>
+
+            <div class="studio-badge" aria-hidden="true">
+              <span class="studio-badge-vlt" id="studioBadgeVlt">35%</span>
+              <span class="studio-badge-label">VLT<br><em id="studioBadgeCount">5 windows</em></span>
+            </div>
+
+            <div class="studio-toolbar" role="toolbar" aria-label="3D view controls">
+              <div class="studio-views" role="group" aria-label="Camera angle">
+                <button type="button" class="studio-tool" data-view="hero" aria-label="Three-quarter view">3/4</button>
+                <button type="button" class="studio-tool" data-view="front" aria-label="Front view">Front</button>
+                <button type="button" class="studio-tool" data-view="driver" aria-label="Side view">Side</button>
+                <button type="button" class="studio-tool" data-view="rear" aria-label="Rear view">Rear</button>
+              </div>
+              <div class="studio-tools-right">
+                <button type="button" class="studio-tool studio-compare" id="studioCompare" aria-pressed="false" title="Hold or tap to compare with factory glass">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v18"/><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-7z" fill="currentColor" opacity="0.35"/></svg>
+                  <span>Before / After</span>
+                </button>
+                <button type="button" class="studio-tool studio-tool--icon" id="studioFullscreen" aria-label="Full screen">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <p class="studio-hint" id="studioHint">Drag to rotate &middot; tap a window to select it</p>
+          </div>
+        </div>
+
+        <div class="studio-panel">
+          <div class="studio-step">
+            <p class="studio-step-label" id="studioVehicleLabel"><span>1</span> Choose a vehicle</p>
+            <div class="studio-vehicles" id="studioVehicles" role="radiogroup" aria-labelledby="studioVehicleLabel"></div>
+            <p class="studio-other">Van, box truck, or something else? <button type="button" class="link-btn" id="studioCustomQuote">Get a custom quote</button></p>
+          </div>
+
+          <div class="studio-step">
+            <p class="studio-step-label"><span>2</span> Choose your shade</p>
+            <div class="shade-controls">
+              <div class="shade-readout">
+                <span class="shade-readout-value" id="shadeValue">35% VLT</span>
+                <span class="shade-readout-desc" id="shadeDesc">Most popular daily-driver shade</span>
+              </div>
+              <input type="range" class="shade-slider" id="shadeSlider" min="5" max="70" step="1" value="35" aria-label="Drag to preview window tint darkness. Snaps to the shades we offer: 5%, 20%, 35%, or 70% VLT">
+              <div class="shade-slider-scale"><span>5% &mdash; darkest</span><span>70% &mdash; lightest</span></div>
+              <div class="shade-presets" role="group" aria-label="Shades we offer">
+                <button type="button" class="shade-preset" data-vlt="5">5%</button>
+                <button type="button" class="shade-preset" data-vlt="20">20%</button>
+                <button type="button" class="shade-preset is-active" data-vlt="35">35%</button>
+                <button type="button" class="shade-preset" data-vlt="70">70%</button>
+              </div>
+              <p class="studio-legal">VLT = how much light gets through. Lower is darker. We&rsquo;ll always confirm your state&rsquo;s legal limits before install.</p>
+            </div>
+          </div>
+
+          <div class="studio-step">
+            <p class="studio-step-label" id="studioWindowsLabel"><span>3</span> Pick your windows <em class="studio-count" id="studioCount">5 of 6</em></p>
+            <div class="studio-packages" id="studioPackages" role="group" aria-label="Window packages"></div>
+            <div class="zone-map" id="zoneMap" role="group" aria-labelledby="studioWindowsLabel">
+              <svg class="zone-map-car" viewBox="0 0 200 330" aria-hidden="true">
+                <path d="M100 6c38 0 62 10 70 34l8 60v150l-6 48c-6 18-36 26-72 26s-66-8-72-26l-6-48V100l8-60C38 16 62 6 100 6z" />
+                <path class="zone-map-arrow" d="M100 18l-7 10h14z" />
+              </svg>
+            </div>
+            <p class="zone-map-legend"><span>Driver side</span><span>Passenger side</span></p>
+          </div>
+
+          <div class="studio-step studio-step--price" id="tint-price">
+            <p class="studio-step-label"><span>4</span> Film &amp; price</p>
+            <label class="ceramic-toggle" id="ceramicToggleLabel">
+              <input type="checkbox" id="ceramicUpgradeToggle">
+              <span class="ceramic-toggle-switch" aria-hidden="true"></span>
+              <span class="ceramic-toggle-copy">
+                <strong>Upgrade to Ceramic</strong>
+                <span>Our best heat rejection &amp; clarity &mdash; add <span id="ceramicUpgradeAmount">$100</span> to your total</span>
+              </span>
+            </label>
+            <details class="film-details">
+              <summary>Carbon vs. Ceramic &mdash; what&rsquo;s the difference?</summary>
+              <div class="film-compare">
+                <div class="film-compare-card film-compare-card--featured" data-film="Ceramic">
+                  <h4>Ceramic <span class="film-compare-tag">Recommended</span></h4>
+                  <ul class="film-compare-list">
+                    <li class="is-yes">Blocks up to 99% of UV rays</li>
+                    <li class="is-yes">Best-in-class heat rejection &mdash; noticeably cooler cabin</li>
+                    <li class="is-yes">Zero signal interference (GPS, phone, radio)</li>
+                    <li class="is-yes">Won&rsquo;t fade, bubble, or discolor &mdash; ever</li>
+                    <li class="is-yes">Sharpest, clearest optical view</li>
+                  </ul>
+                </div>
+                <div class="film-compare-card" data-film="Carbon">
+                  <h4>Carbon <span class="film-compare-tag">Included</span></h4>
+                  <ul class="film-compare-list">
+                    <li class="is-yes">Blocks up to 99% of UV rays</li>
+                    <li class="is-yes">Won&rsquo;t fade or turn purple over time</li>
+                    <li class="is-yes">Sleek matte-black finish</li>
+                    <li class="is-no">Less heat rejection than ceramic</li>
+                    <li class="is-no">No extra infrared-blocking technology</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+
+            <div class="studio-quote" id="pricingResult" role="status">
+              <div class="pricing-result-top">
+                <span class="pricing-result-label" id="pricingResultLabel">Sedan / Coupe &middot; Carbon &middot; 5 windows</span>
+                <span class="pricing-result-price" id="pricingResultPrice">$250</span>
+              </div>
+              <p class="pricing-result-note" id="pricingResultNote"></p>
+              <p class="studio-nudge" id="studioNudge" hidden></p>
+              <button type="button" class="btn btn-primary btn-lg" id="pricingContinueBtn">Book This Price</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="studio-credit" id="studioCredit"></p>
+    </div>
+
+    <!-- Phones: the running total stays in reach while scrolling the options. -->
+    <div class="studio-bar" id="studioBar" aria-hidden="true">
+      <div class="studio-bar-info">
+        <strong id="studioBarPrice">$250</strong>
+        <span id="studioBarDetail">5 windows &middot; 35% &middot; Carbon</span>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="studioBarBook" tabindex="-1">Book</button>
     </div>
   </section>
 
@@ -192,41 +354,6 @@
       <img src="assets/logos/lexus.png" alt="" loading="lazy">
     </div>
   </div>
-
-  <!-- ===== Shade Selector ===== -->
-  <section class="section section-muted" id="shades">
-    <div class="container">
-      <div class="section-head" data-reveal>
-        <p class="kicker">Choose Your Shade</p>
-        <h2>From subtle to blacked-out, dialed to your state&rsquo;s legal limit.</h2>
-        <p class="section-lead">VLT (Visible Light Transmission) is the percentage of light let through your glass. Drag the slider or tap a shade below to see it applied to the car in real time &mdash; lower numbers mean darker tint. We&rsquo;ll always confirm your local legal limits before install.</p>
-      </div>
-
-      <div class="shade-interactive" data-reveal>
-        <div class="shade-car-stage">
-          <div class="shade-car-frame">
-            <img src="assets/shade-car.png" alt="Sedan preview showing the selected window tint darkness" class="shade-car-photo">
-            <div id="shadeTintOverlay" class="shade-tint-overlay" aria-hidden="true"></div>
-          </div>
-        </div>
-
-        <div class="shade-controls">
-          <div class="shade-readout">
-            <span class="shade-readout-value" id="shadeValue">35% VLT</span>
-            <span class="shade-readout-desc" id="shadeDesc">Most popular daily-driver shade</span>
-          </div>
-          <input type="range" class="shade-slider" id="shadeSlider" min="5" max="70" step="1" value="35" aria-label="Drag to preview window tint darkness. Snaps to the shades we offer: 5%, 20%, 35%, or 70% VLT">
-          <div class="shade-slider-scale"><span>5% &mdash; darkest</span><span>70% &mdash; lightest</span></div>
-          <div class="shade-presets" role="group" aria-label="Shades we offer">
-            <button type="button" class="shade-preset" data-vlt="5">5%</button>
-            <button type="button" class="shade-preset" data-vlt="20">20%</button>
-            <button type="button" class="shade-preset is-active" data-vlt="35">35%</button>
-            <button type="button" class="shade-preset" data-vlt="70">70%</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
 
   <!-- ===== Services ===== -->
   <section class="section" id="services">
@@ -331,7 +458,7 @@
       </div>
 
       <div class="cta-inline">
-        <a href="#pricing-calculator" class="btn btn-primary btn-lg">Find My Pricing</a>
+        <a href="#tint-studio" class="btn btn-primary btn-lg">Find My Pricing</a>
       </div>
     </div>
   </section>
@@ -358,7 +485,7 @@
         <li>Monroe, MI</li>
         <li>&amp; Nearby Areas</li>
       </ul>
-      <p class="service-area-note">Don&rsquo;t see your city? <a href="#pricing-calculator">Ask us</a> &mdash; there&rsquo;s a good chance we still cover it.</p>
+      <p class="service-area-note">Don&rsquo;t see your city? <a href="#quote">Ask us</a> &mdash; there&rsquo;s a good chance we still cover it.</p>
     </div>
   </section>
 
@@ -462,95 +589,16 @@
   <section class="section quote-section" id="quote">
     <div class="container">
       <div class="section-head" data-reveal>
-        <p class="kicker">Find My Pricing</p>
-        <h2>See your price instantly, then lock in your appointment.</h2>
-        <p class="section-lead">Pick your vehicle type, film, and how many windows &mdash; get an instant price, then submit your availability and we&rsquo;ll confirm the details.</p>
+        <p class="kicker">Book Your Install</p>
+        <h2>Lock in your price, then pick a time.</h2>
+        <p class="section-lead">Build your tint in the Tint Studio, then tell us about your vehicle and where to meet you. We&rsquo;ll confirm the details within one business day.</p>
       </div>
 
-      <div class="pricing-calculator card" id="pricing-calculator" data-reveal>
-        <div class="pricing-step" id="pricingStepCategory">
-          <span class="field-label">1. Vehicle Type</span>
-          <div class="tile-options tile-options--body" role="radiogroup" aria-label="Vehicle type for pricing">
-            <label class="tile tile--body">
-              <input type="radio" name="pricingCategory" value="sedan">
-              <span>
-                <svg class="tile-body-icon" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 18 6 10q2-4 8-4h8q5 0 8 4l2 8" stroke-linejoin="round"/><path d="M2 18h44"/></svg>
-                Sedan / Coupe
-                <em class="tile-desc">Standard 4-door glass</em>
-              </span>
-            </label>
-            <label class="tile tile--body">
-              <input type="radio" name="pricingCategory" value="suv_truck">
-              <span>
-                <svg class="tile-body-icon" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 18 5 8q1-3 6-3h20q4 0 6 4l3 9" stroke-linejoin="round"/><path d="M2 18h44"/></svg>
-                SUV / Truck
-                <em class="tile-desc">Tall doors &amp; large rear glass</em>
-              </span>
-            </label>
-            <label class="tile tile--body">
-              <input type="radio" name="pricingCategory" value="van_other">
-              <span>
-                <svg class="tile-body-icon" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="7" width="42" height="11" rx="2"/><path d="M2 18h44"/></svg>
-                Van / Other
-                <em class="tile-desc">Vans, box trucks &amp; specialty vehicles</em>
-              </span>
-            </label>
-          </div>
-        </div>
-
-        <div class="pricing-step" id="pricingStepWindows" hidden>
-          <span class="field-label">2. Number of Windows</span>
-          <p class="pricing-step-note">Every quote starts with our durable Carbon film &mdash; priced below.</p>
-          <div class="pricing-window-options" id="pricingWindowOptions" role="radiogroup" aria-label="Number of windows"></div>
-        </div>
-
-        <div class="pricing-step pricing-custom" id="pricingStepCustom" hidden>
-          <p>Vans, box trucks &amp; specialty vehicles vary too much for instant pricing. Tell us about yours below and we&rsquo;ll text or call you a custom quote &mdash; still 100% mobile.</p>
-        </div>
-
-        <div class="pricing-step" id="pricingStepUpgrade" hidden>
-          <span class="field-label">3. Want the upgrade?</span>
-
-          <label class="ceramic-toggle" id="ceramicToggleLabel">
-            <input type="checkbox" id="ceramicUpgradeToggle">
-            <span class="ceramic-toggle-switch" aria-hidden="true"></span>
-            <span class="ceramic-toggle-copy">
-              <strong>Upgrade to Ceramic</strong>
-              <span>Our best heat rejection &amp; clarity &mdash; add <span id="ceramicUpgradeAmount">$100</span> to your total</span>
-            </span>
-          </label>
-
-          <div class="film-compare">
-            <div class="film-compare-card film-compare-card--featured" data-film="Ceramic">
-              <h4>Ceramic <span class="film-compare-tag">Recommended</span></h4>
-              <ul class="film-compare-list">
-                <li class="is-yes">Blocks up to 99% of UV rays</li>
-                <li class="is-yes">Best-in-class heat rejection &mdash; noticeably cooler cabin</li>
-                <li class="is-yes">Zero signal interference (GPS, phone, radio)</li>
-                <li class="is-yes">Won&rsquo;t fade, bubble, or discolor &mdash; ever</li>
-                <li class="is-yes">Sharpest, clearest optical view</li>
-              </ul>
-            </div>
-            <div class="film-compare-card" data-film="Carbon">
-              <h4>Carbon <span class="film-compare-tag">Included</span></h4>
-              <ul class="film-compare-list">
-                <li class="is-yes">Blocks up to 99% of UV rays</li>
-                <li class="is-yes">Won&rsquo;t fade or turn purple over time</li>
-                <li class="is-yes">Sleek matte-black finish</li>
-                <li class="is-no">Less heat rejection than ceramic</li>
-                <li class="is-no">No extra infrared-blocking technology</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div class="pricing-result" id="pricingResult" role="status" hidden>
-          <div class="pricing-result-top">
-            <span class="pricing-result-label" id="pricingResultLabel"></span>
-            <span class="pricing-result-price" id="pricingResultPrice"></span>
-          </div>
-          <p class="pricing-result-note" id="pricingResultNote"></p>
-          <button type="button" class="btn btn-primary btn-lg" id="pricingContinueBtn">Book This Price</button>
+      <div class="quote-start card" id="quoteStart" data-reveal>
+        <p><strong>Start in the Tint Studio.</strong> Choose your shade and windows to get an instant price &mdash; then come back here to book.</p>
+        <div class="quote-start-actions">
+          <a href="#tint-studio" class="btn btn-primary">Open the Tint Studio</a>
+          <button type="button" class="btn btn-outline" id="quoteStartCustom">Van / other &mdash; custom quote</button>
         </div>
       </div>
 
@@ -611,6 +659,7 @@
           <legend>Shade Preference</legend>
           <input type="hidden" id="pricingFilmTypeField" name="filmType" value="">
           <input type="hidden" id="pricingWindowCountField" name="windowCount" value="">
+          <input type="hidden" id="pricingWindowsSelectedField" name="windowsSelected" value="">
           <input type="hidden" id="pricingEstimatedPriceField" name="estimatedPrice" value="">
           <div class="form-grid form-grid-2">
             <div class="field">
@@ -738,7 +787,7 @@
         <p>Get a free, no-obligation quote in under two minutes &mdash; we&rsquo;ll bring the shop to your driveway anywhere in Toledo, OH &amp; nearby areas.</p>
       </div>
       <div class="cta-band-actions">
-        <a href="#pricing-calculator" class="btn btn-primary btn-lg" aria-label="Jump to the pricing calculator">Find My Pricing</a>
+        <a href="#tint-studio" class="btn btn-primary btn-lg" aria-label="Open the Tint Studio">Select My Tint</a>
         <a href="tel:+14193097116" class="btn btn-outline-light btn-lg" aria-label="Call DNA Tinting at (419) 309-7116">Call (419) 309-7116</a>
       </div>
     </div>
@@ -764,7 +813,7 @@
     <div class="footer-col">
       <h4>Quick Links</h4>
       <ul>
-        <li><a href="#shades">Shades</a></li>
+        <li><a href="#tint-studio">Tint Studio</a></li>
         <li><a href="#services">Services</a></li>
         <li><a href="#service-area">Service Area</a></li>
         <li><a href="#gallery">Gallery</a></li>
@@ -806,5 +855,6 @@
 
 <script src="js/vehicle-data.js"></script>
 <script src="js/script.js"></script>
+<script type="module" src="js/tint-studio/main.js"></script>
 </body>
 </html>
