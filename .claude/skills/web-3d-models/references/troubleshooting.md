@@ -38,6 +38,7 @@ First steps for any problem:
 | All black | No environment (metals are black without reflections), or no lights at all | Environment on (`room` or HDR). Check `scene.environment` is set |
 | All white / pink / missing textures | Texture files missing (.gltf/OBJ/FBX), wrong case in filenames, or absolute paths from the author's PC | The inspector flags missing files. Put the images beside the model or pack to GLB. Converter warnings list the paths |
 | Colors washed out or too dark | Color space: sRGB texture treated as linear or vice versa (custom `TextureLoader`) | Color maps: `tex.colorSpace = SRGBColorSpace`. Data maps linear. glTF textures: `flipY = false` |
+| `envMapIntensity` on a material does nothing | three r163+ uses `scene.environmentIntensity` for every material that inherits `scene.environment` | Set `material.envMap = scene.environment` explicitly on materials that need their own reflection level (e.g. glass) |
 | Colors shifted (red → orange), overly contrasty | ACES tone mapping | `toneMapping: 'neutral'` |
 | Plastic look (OBJ/FBX conversions) | Phong → PBR guesses | Set `roughness`/`metalness` per part in a swatch default. Re-author in Blender |
 | Glass opaque grey, or interior invisible behind glass | `alphaMode OPAQUE` on glass, or transparent sorting | Use the `glass` shorthand (transparent, depthWrite false). If still wrong, set `renderOrder` on glass higher than the interior |

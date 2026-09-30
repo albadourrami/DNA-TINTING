@@ -53,7 +53,9 @@ Options apply in config order on load, from each `default` (or the first choice)
 
 - `tint` defaults to a neutral charcoal `#0b0f14`. Try a blue-grey `#0e1620` for ceramic "IR" films, or a bronze `#1a140c`.
 - The mapping is perceptual, not physically exact. In real life the look also depends on how bright the interior is. Calibrate against photos of real films: adjust `visibleLight` per choice or add `opacity` explicitly (`{ glass: {...}, opacity: 0.7 }` overrides).
-- Transmission (real refraction) is deliberately not used: it's slow on phones and makes interiors look milky.
+- Transmission (real refraction) is deliberately not used here: it's slow on phones and makes interiors look milky. For a higher-fidelity desktop tier, use `transmission: 1` with `color` set to the VLT: it multiplies what shows through, so 35% film means color 0.35. Keep `thickness: 0` for thin automotive glass.
+- For a fast tier that still looks glossy: add a second, additive reflection-only layer on the same geometry (black `MeshPhysicalMaterial` with `blending: AdditiveBlending`, `depthWrite: false`) on top of the tint layer. Additive blending happens after tone mapping, so give that layer a much lower `envMapIntensity` (~0.35) than you'd expect. Pass `envMap` explicitly, or the intensity is ignored (see troubleshooting).
+- A production implementation of both tiers, per-window zones, and automatic window detection lives in the DNA Tinting repo: `js/tint-studio/` (`glass.js`, `glass-zones.js`).
 - **Different tint for windshield vs. sides** (common legal difference): make two parts (`windshield`, `sideWindows`) by mesh name and two options, or one option whose choices apply to one part and use `visible` or a second option for the other.
 - **Show the interior darkening.** With dark tints, the interior should fade. The opacity already does this. For extra realism, lower `envMapIntensity` on interior materials when tint is dark (a custom `change` handler plus `setPartMaterial('interior', …)`).
 

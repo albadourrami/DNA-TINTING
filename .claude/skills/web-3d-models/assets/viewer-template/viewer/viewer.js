@@ -638,7 +638,11 @@ export async function createViewer(container, userConfig) {
         const choice = opt.choices.find((c) => c.id === value);
         if (!choice) return console.warn(`[viewer] Option "${id}" has no choice "${value}"`);
         if (choice.variant) { await selectVariant(choice.variant); await reapplyNonVariantOptions(id); }
-        if (choice.material) for (const mat of resolvePart(opt.part).materials) applyMaterialProps(mat, choice.material);
+        if (choice.material) for (const mat of resolvePart(opt.part).materials) {
+          // envMapIntensity is ignored for materials that only inherit scene.environment.
+          if ((choice.material.glass || choice.material.envMapIntensity !== undefined) && !mat.envMap) mat.envMap = scene.environment;
+          applyMaterialProps(mat, choice.material);
+        }
         if (choice.visible) for (const [partId, on] of Object.entries(choice.visible)) for (const mesh of resolvePart(partId).meshes) mesh.visible = on;
       }
       selections[id] = value;
