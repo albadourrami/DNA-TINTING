@@ -149,8 +149,11 @@ export function buildGlassZones(frame, model, vehicle) {
 
   const glassRe = vehicle.glassMaterials ? new RegExp(vehicle.glassMaterials, 'i') : GLASS_MATERIAL_RE;
   const auto = vehicle.glass === 'auto' || !vehicle.glass;
-  const explicitMesh = auto ? null : matcher(Object.values(vehicle.glass).flatMap((d) => d.meshes || d.nodes || []));
-  const explicitMat = auto ? null : matcher(Object.values(vehicle.glass).flatMap((d) => d.materials || []));
+  // The windshield isn't a tintable window, but the viewer needs it (factory glass + strip),
+  // so it's resolved like one under the internal id 'windshield'.
+  const glassConfig = auto ? null : { ...vehicle.glass, ...(vehicle.windshield?.meshes || vehicle.windshield?.materials ? { windshield: vehicle.windshield } : {}) };
+  const explicitMesh = auto ? null : matcher(Object.values(glassConfig).flatMap((d) => d.meshes || d.nodes || []));
+  const explicitMat = auto ? null : matcher(Object.values(glassConfig).flatMap((d) => d.materials || []));
 
   const candidates = [];
   model.traverse((o) => {
@@ -163,7 +166,7 @@ export function buildGlassZones(frame, model, vehicle) {
 
   const analyses = candidates.map((mesh) => analyzeMesh(mesh, inv.clone().multiply(mesh.matrixWorld)));
   const allPieces = analyses.flatMap((a) => a.pieces);
-  const assignment = auto ? classifyAuto(allPieces, vehicleBox) : classifyExplicit(analyses, vehicle.glass);
+  const assignment = auto ? classifyAuto(allPieces, vehicleBox) : classifyExplicit(analyses, glassConfig);
 
   const zones = new Map();
   const otherGlass = [];

@@ -361,6 +361,7 @@
   const pricingFilmTypeField = document.getElementById("pricingFilmTypeField");
   const pricingWindowCountField = document.getElementById("pricingWindowCountField");
   const pricingWindowsSelectedField = document.getElementById("pricingWindowsSelectedField");
+  const pricingWindshieldStripField = document.getElementById("pricingWindshieldStripField");
   const pricingEstimatedPriceField = document.getElementById("pricingEstimatedPriceField");
   const studioSection = document.getElementById("tint-studio");
 
@@ -369,6 +370,7 @@
     pricingFilmTypeField.value = booking.filmType || "";
     pricingWindowCountField.value = booking.windowCount ? String(booking.windowCount) : "";
     pricingWindowsSelectedField.value = booking.windowsSelected || "";
+    pricingWindshieldStripField.value = booking.windshieldStrip || "";
     pricingEstimatedPriceField.value = booking.estimatedPrice;
     pricingSummaryCategory.textContent = booking.summaryTitle;
     pricingSummaryDetail.textContent = booking.summaryDetail;

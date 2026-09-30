@@ -1,51 +1,59 @@
 # Tint Studio vehicles
 
-Each vehicle has a folder here (model, poster, thumbnail, photo) and a config file in
-`js/tint-studio/vehicles/`. The 3D viewer never names a mesh itself, so adding a car means
-adding files, not changing code.
+Each vehicle has a folder here (`<id>.glb`, `poster.webp`, `thumb.webp`) and a config file in
+`js/tint-studio/vehicles/`. The 3D viewer never names a mesh itself. Adding or swapping a car
+means adding files, not changing code.
 
-## Adding a vehicle (e.g. the C-Class once a licensed model is available)
+## Live vehicles
 
-1. **Get a model you're licensed to use on a commercial website.** Check the license says it
-   allows commercial use and real-time/web display. Many branded car models on TurboSquid and
-   CGTrader are "Editorial use only", which does not cover advertising. Ask for:
-   - GLB/glTF (FBX or OBJ also work; we convert)
-   - real-world scale in meters
-   - an interior (tint only reads realistic if there's a cabin behind the glass)
-   - separate glass meshes, or at least a separate glass material
-   - under ~300k triangles
-2. **Inspect, then optimize:**
+| Id | Slot | Source | Notes |
+|---|---|---|---|
+| `audi-a3` | Sedan / Coupe pricing | Purchased model (commercial license, owner-supplied) | 3-door Sportback. The source has no interior, so the build generates a cabin. Its "rear windows" are the rear quarter glass. The source mesh has some panel waviness. |
+| `mercedes-gls` | SUV / Truck pricing | Purchased model (commercial license, owner-supplied) | Full interior. The panoramic roof stays factory glass. Rear windows = rear door + third-row glass. |
+
+Hidden but kept working (`enabled: false`; preview with `?studio-vehicle=<id>`):
+- `concept-demo`: the CC BY 4.0 stand-in coupe.
+- `c-class`, `gle`: photo-only placeholders, waiting on licensed models.
+
+Keep the source `.blend` / `.fbx` files and the license receipts **out of this repo**, in your
+own storage. Only the web-optimized GLBs live here.
+
+## Adding or replacing a vehicle
+
+1. **Model license.** It must allow commercial and advertising use on a website. Do not use
+   anything marked "Editorial use only". A 3D-model license covers the model, not the
+   carmaker's trademarks, so don't imply the carmaker endorses DNA Tinting.
+
+2. **Build a web GLB** with the Blender pipeline. It rescales to real size, cleans the mesh,
+   rebuilds all materials as PBR, and splits the glass into per-window meshes:
    ```bash
-   node .claude/skills/web-3d-models/scripts/inspect_model.mjs c-class.glb
-   node .claude/skills/web-3d-models/scripts/optimize_model.mjs c-class.glb assets/vehicles/c-class/c-class.glb --texture-size 1024
+   python -m venv .bpy && .bpy/bin/pip install "bpy==4.2.*" pillow
+   # add a recipe to tools/vehicles/recipes.py (copy 'gls' or 'a3'), then:
+   .bpy/bin/python tools/vehicles/build_vehicle.py <recipe> source.blend /tmp/car.glb --render /tmp/check.png
+   node .claude/skills/web-3d-models/scripts/optimize_model.mjs /tmp/car.glb assets/vehicles/<id>/<id>.glb --texture-size 1024
    ```
-   Aim for under 4 MB. Add `--simplify 0.5` if it's over ~300k triangles.
-3. **Point the config at it.** In `js/tint-studio/vehicles/c-class.js`, set
-   `modelUrl: 'assets/vehicles/c-class/c-class.glb'`.
-4. **Map the windows.** Leave `glass: 'auto'` and open the site with `?studio-debug`. Each
-   window zone is painted a different color:
+   `--render` writes Cycles check images with every window zone in its own color. Aim for a
+   GLB under 1.5 MB and under 150k triangles.
 
-   | Color  | Zone            |
-   |--------|-----------------|
-   | Red    | Windshield      |
-   | Green  | Front driver    |
-   | Blue   | Front passenger |
-   | Yellow | Rear driver     |
-   | Purple | Rear passenger  |
-   | Orange | Rear windshield |
+   The build names the glass meshes:
+   - Windows: `Glass_Windshield`, `Glass_FrontDriver`, `Glass_FrontPassenger`, `Glass_RearDriver`, `Glass_RearPassenger`, `Glass_RearWindow`
+   - Not tintable: `Glass_Roof`, `Glass_Lamp`, `Glass_Other`
 
-   The console prints every glass piece and the zone it was given. If anything is wrong,
-   replace `'auto'` with an explicit mapping (see `concept-demo.js`). A mesh that holds
-   several windows is split with `side: 'driver' | 'passenger'` and `part: 'front' | 'rear'`.
-5. **Poster + thumbnail.** In the browser console on the studio:
-   `copy(tintStudio.viewer.screenshot())` gives you the current view as an image. Save it as
-   `poster.webp` (about 1600×1000) and a 360×270 crop as `thumb.webp`.
-6. **Make it the default.** Set `DEFAULT_VEHICLE_ID` in `js/tint-studio/vehicles/index.js`.
-   Remove the demo coupe from `VEHICLES` once both Mercedes models are in.
+3. **Config.** Copy `js/tint-studio/vehicles/mercedes-gls.js` to `<id>.js`, set its fields
+   (`bodyType`, `modelUrl`, `glass`, `windshield`, `pricing`), import it in `vehicles/index.js`
+   and add it to `ALL_VEHICLES`. With the build above, the glass names match the GLS config as-is.
+   For a model that didn't go through the build, use `glass: 'auto'` and open the site with
+   `?studio-debug`. Each window then gets its own color and the console lists every glass piece.
 
-## Current assets
+4. **Poster + thumbnail.** On the studio, run `copy(tintStudio.viewer.screenshot())` in the
+   browser console. Save it as `poster.webp` (about 1600×1000) and a 360×270 crop as `thumb.webp`.
 
-| Folder | What | License |
-|---|---|---|
-| `concept-demo/` | Stand-in 3D model, built by `tools/vehicles/prepare-concept-demo.mjs` | "Car Concept" by Eric Chadwick / Darmstadt Graphics Group, **CC BY 4.0**. Modified: logos removed, repainted, simplified. The credit line under the studio must stay while it's used. |
-| `c-class/`, `gle/` | Photos for the vehicle cards and placeholder stage | Owner-supplied photos |
+## Windshield strip
+
+`windshield: { meshes: ['Glass_Windshield'], strip: { depth: 0.127 } }`
+
+The strip is the top band of the windshield, `depth` meters down from the top edge, measured
+along the glass (0.127 m = 5 in). The viewer cuts it with a clipping plane, so no separate mesh
+is needed. Remove `strip` to turn the add-on off for a vehicle. The price is
+`WINDSHIELD_STRIP_PRICE` in `js/tint-studio/pricing.js`, or `pricing: { windshieldStrip: 30 }`
+per vehicle. The full windshield is never offered as a tintable window.

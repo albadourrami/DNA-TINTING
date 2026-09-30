@@ -16,6 +16,12 @@
 //    credit       attribution shown under the stage (required for CC BY assets)
 //    rotation     [x, y, z] degrees so the car faces +Z (front) with +Y up
 //    camera       { azimuth, elevation, distance } start view overrides
+//    windshield   { meshes: [...], strip: { depth: 0.127 } } — the windshield glass and how deep
+//                 the "Windshield strip" add-on reaches down from its top edge (meters, along
+//                 the glass; 0.127 = 5 in). The strip is cut in 3D with a clipping plane, so no
+//                 separate strip mesh is needed. Omit `strip` to disable the add-on.
+//    pricing      overrides for pricing.js defaults: { perWindow, allWindows, ceramic: {...},
+//                 windshieldStrip } — e.g. { windshieldStrip: 30 }
 //    glass        how the viewer finds each window. Either:
 //                   'auto' — detect windows from glass-looking meshes by position, or
 //                   { zoneId: { meshes: [...], materials: [...], side: 'driver'|'passenger',
@@ -25,13 +31,18 @@
 //    glassMaterials  material names that are glass (used by 'auto'; default /glass|window/i)
 //    appearance   { 'Material name': { color, roughness, metalness } } paint/trim overrides
 // ─────────────────────────────────────────────────────────────────────────────
-import conceptDemo from './concept-demo.js';
+import audiA3 from './audi-a3.js';
+import mercedesGls from './mercedes-gls.js';
 import cClass from './c-class.js';
 import gle from './gle.js';
+import conceptDemo from './concept-demo.js';
 
-export const VEHICLES = [conceptDemo, cClass, gle].filter((v) => v.enabled !== false);
+// Every vehicle the studio knows about. Entries with `enabled: false` stay available to
+// developers (?studio-vehicle=<id>) but are never shown to customers.
+export const ALL_VEHICLES = [audiA3, mercedesGls, cClass, gle, conceptDemo];
+export const VEHICLES = ALL_VEHICLES.filter((v) => v.enabled !== false);
 
-// Shown first. Switch to 'c-class' once its licensed model is in place.
-export const DEFAULT_VEHICLE_ID = 'concept-demo';
+// Shown first.
+export const DEFAULT_VEHICLE_ID = 'audi-a3';
 
-export const vehicleById = (id) => VEHICLES.find((v) => v.id === id) || VEHICLES[0];
+export const vehicleById = (id) => VEHICLES.find((v) => v.id === id) || ALL_VEHICLES.find((v) => v.id === id) || VEHICLES[0];

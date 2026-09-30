@@ -2,8 +2,8 @@
 // the lazily loaded 3D viewer. Everything here works without WebGL — the 3D car is an
 // enhancement layered on top (viewer.js is only imported when the studio nears the screen).
 import { VEHICLES, DEFAULT_VEHICLE_ID, vehicleById } from './vehicles/index.js';
-import { ZONES, PACKAGES, DEFAULT_ZONES, zoneById } from './zones.js';
-import { quote, formatPrice, CERAMIC_UPGRADE } from './pricing.js';
+import { ZONES, ZONE_GROUPS, PACKAGES, DEFAULT_ZONES, EXTRAS, zoneById } from './zones.js';
+import { quote, formatPrice, pricingFor } from './pricing.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -38,13 +38,19 @@ const els = {
   barDetail: $('studioBarDetail'),
   barBook: $('studioBarBook'),
   customQuote: $('studioCustomQuote'),
+  strip: $('windshieldStripToggle'),
+  stripLabel: $('stripToggleLabel'),
+  stripPrice: $('stripPrice'),
+  stripStep: $('studioStripStep'),
 };
 const debug = new URLSearchParams(location.search).has('studio-debug');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const state = {
-  vehicle: vehicleById(DEFAULT_VEHICLE_ID),
+  // ?studio-vehicle=<id> previews any registered vehicle, including hidden ones (dev only).
+  vehicle: vehicleById(new URLSearchParams(location.search).get('studio-vehicle') || DEFAULT_VEHICLE_ID),
   zones: new Set(DEFAULT_ZONES),
+  strip: false,
   vlt: window.dnaShade || Number(document.getElementById('shadeSlider')?.value) || 35,
   compare: false,
 };
@@ -65,7 +71,7 @@ function renderVehicles() {
     b.innerHTML = `
       <span class="vehicle-card-img">${v.thumb ? `<img src="${v.thumb}" alt="" loading="lazy" width="360" height="270">` : ''}
         <span class="vehicle-card-tag${v.modelUrl ? ' is-3d' : ''}">${tag}</span></span>
-      <span class="vehicle-card-text"><strong>${v.make === 'DNA Studio' ? v.model : `${v.make.replace('Mercedes-Benz', 'Mercedes')} ${v.model}`}</strong>
+      <span class="vehicle-card-text"><strong>${v.make === 'DNA Studio' ? v.model : `${v.make} ${v.model}`}</strong>
         <em>${bodyLabel}</em></span>`;
     b.addEventListener('click', () => selectVehicle(v.id));
     els.vehicles.appendChild(b);
@@ -90,17 +96,28 @@ els.vehicles.addEventListener('keydown', (e) => {
   next.click();
 });
 
-// ---------- Window picker ----------
+// ---------- Window picker: Front windows / Rear windows / Rear windshield ----------
 function renderZones() {
-  for (const z of ZONES) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = `zone-btn zone-btn--${z.id}`;
-    b.dataset.zone = z.id;
-    b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = `<span class="zone-btn-check" aria-hidden="true"></span><span>${z.label}</span>`;
-    b.addEventListener('click', () => toggleZone(z.id, { fromList: true }));
-    els.zoneMap.appendChild(b);
+  els.zoneMap.innerHTML = '';
+  for (const g of ZONE_GROUPS) {
+    const group = document.createElement('div');
+    group.className = `zone-group zone-group--${g.id}`;
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', g.label);
+    group.innerHTML = `<p class="zone-group-label">${g.label}</p><div class="zone-group-row"></div>`;
+    const row = group.querySelector('.zone-group-row');
+    for (const z of ZONES.filter((x) => x.group === g.id)) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `zone-btn zone-btn--${z.id}`;
+      b.dataset.zone = z.id;
+      b.setAttribute('aria-pressed', 'false');
+      b.setAttribute('aria-label', z.label);
+      b.innerHTML = `<span class="zone-btn-check" aria-hidden="true"></span><span>${z.short}</span>`;
+      b.addEventListener('click', () => toggleZone(z.id, { fromList: true }));
+      row.appendChild(b);
+    }
+    els.zoneMap.appendChild(group);
   }
   for (const p of PACKAGES) {
     const b = document.createElement('button');
@@ -115,6 +132,7 @@ function renderZones() {
 }
 
 function toggleZone(id, { fromList = false } = {}) {
+  if (id === 'windshieldStrip') { setStrip(!state.strip, { fromList }); return; }
   const next = new Set(state.zones);
   const adding = !next.has(id);
   if (adding) next.add(id); else next.delete(id);
@@ -123,12 +141,27 @@ function toggleZone(id, { fromList = false } = {}) {
   if (fromList && adding && viewer && !reducedMotion) viewer.view(zoneById(id).view, 800);
 }
 
+const selectedIds = () => [...state.zones, ...(state.strip ? ['windshieldStrip'] : [])];
+
 function setZones(ids, { pulse = false } = {}) {
-  state.zones = new Set(ids);
-  viewer?.setSelectedZones([...state.zones]);
+  state.zones = new Set(ids.filter((id) => zoneById(id)));
+  viewer?.setSelectedZones(selectedIds());
   if (pulse && viewer) viewer.pulse(pulse === true ? [...state.zones] : pulse);
   update();
 }
+
+// ---------- Windshield strip add-on ----------
+function setStrip(on, { fromList = false } = {}) {
+  state.strip = !!on;
+  els.strip.checked = state.strip;
+  viewer?.setSelectedZones(selectedIds());
+  if (on && viewer) {
+    viewer.pulse(['windshieldStrip']);
+    if (fromList && !reducedMotion) viewer.view(EXTRAS.windshieldStrip.view, 800);
+  }
+  update();
+}
+els.strip.addEventListener('change', () => setStrip(els.strip.checked, { fromList: true }));
 
 // ---------- Price + summary ----------
 let priceFrame = null;
@@ -152,14 +185,17 @@ function animatePrice(target) {
 }
 
 const windowWord = (n) => `${n} window${n === 1 ? '' : 's'}`;
+const pricing = () => pricingFor(state.vehicle);
 function currentQuote() {
-  return quote(state.vehicle.bodyType, state.zones.size, els.ceramic.checked);
+  return quote(pricing(), state.zones.size, ZONES.length, { ceramic: els.ceramic.checked, strip: state.strip });
 }
+const selectionText = (q) => [q.windowCount ? (q.isAll ? `all ${q.windowCount} windows` : windowWord(q.windowCount)) : '', q.strip ? 'windshield strip' : ''].filter(Boolean).join(' + ');
 
 function update() {
   const q = currentQuote();
   const n = state.zones.size;
   const film = q.ceramic ? 'Ceramic' : 'Carbon';
+  const hasStrip = !!state.vehicle.windshield?.strip;
 
   // Window buttons + packages.
   els.zoneMap.querySelectorAll('.zone-btn').forEach((b) => b.setAttribute('aria-pressed', String(state.zones.has(b.dataset.zone))));
@@ -168,19 +204,22 @@ function update() {
     b.setAttribute('aria-pressed', String(p.zones.length === n && p.zones.every((z) => state.zones.has(z))));
   });
   els.count.textContent = `${n} of ${ZONES.length}`;
-  els.badgeCount.textContent = n ? windowWord(n) : 'none selected';
+  els.badgeCount.textContent = n || state.strip ? selectionText(q).replace('windshield strip', 'strip') : 'none selected';
 
-  // Film compare highlight + ceramic amount.
-  els.ceramicAmount.textContent = formatPrice(n ? q.upgrade : CERAMIC_UPGRADE.perWindow);
+  // Add-on + film.
+  els.stripStep.hidden = !hasStrip;
+  els.stripPrice.textContent = `+${formatPrice(q.stripPrice)}`;
+  els.stripLabel.classList.toggle('is-checked', state.strip);
+  els.ceramicAmount.textContent = formatPrice(n ? q.upgrade : q.ceramicPerWindow);
   els.ceramicLabel.classList.toggle('is-checked', q.ceramic);
   document.querySelectorAll('.film-compare-card').forEach((c) => c.classList.toggle('is-selected', c.dataset.film === film));
+  els.nudge.hidden = true;
 
-  if (!n) {
+  if (!n && !state.strip) {
     els.resultLabel.textContent = `${q.categoryLabel} · ${film}`;
     els.resultPrice.textContent = '—';
     shownPrice = null;
     els.resultNote.textContent = 'Tap the windows on the car or pick a package to see your price.';
-    els.nudge.hidden = true;
     els.book.disabled = true;
     els.barPrice.textContent = '—';
     els.barDetail.textContent = 'Pick your windows';
@@ -189,43 +228,36 @@ function update() {
   }
   els.book.disabled = false;
   els.barBook.disabled = false;
-  els.resultLabel.textContent = `${q.categoryLabel} · ${q.ceramic ? 'Carbon + Ceramic Upgrade' : 'Carbon'} · ${windowWord(n)}`;
+  els.resultLabel.textContent = `${q.categoryLabel} · ${q.ceramic ? 'Carbon + Ceramic Upgrade' : 'Carbon'} · ${selectionText(q)}`;
   animatePrice(q.total);
-  els.resultNote.textContent = q.ceramic
-    ? `${formatPrice(q.carbon)} Carbon + ${formatPrice(q.upgrade)} Ceramic upgrade.`
-    : q.isFull
-      ? 'Full-vehicle bundle price — our best per-window value.'
-      : `${windowWord(n)} × ${formatPrice(q.perWindow)} per window.`;
-  if (q.bundleNudge !== null) {
-    const missing = ZONES.find((z) => !state.zones.has(z.id));
-    els.nudge.hidden = false;
-    els.nudge.innerHTML = `Add the ${missing.label.toLowerCase()} for just <strong>${formatPrice(q.bundleNudge)}</strong> more &mdash; full-vehicle bundle. <button type="button" class="link-btn" data-add-zone="${missing.id}">Add it</button>`;
-  } else els.nudge.hidden = true;
+  const parts = [];
+  if (n) parts.push(q.isAll ? `All ${n} windows ${formatPrice(q.carbon)}` : `${windowWord(n)} × ${formatPrice(q.perWindow)}`);
+  if (q.ceramic && n) parts.push(`${formatPrice(q.upgrade)} Ceramic upgrade`);
+  if (q.strip) parts.push(`${formatPrice(q.strip)} windshield strip`);
+  els.resultNote.textContent = parts.join(' + ') + '.';
   els.barPrice.textContent = formatPrice(q.total);
-  els.barDetail.textContent = `${windowWord(n)} · ${state.vlt}% · ${film}`;
+  els.barDetail.textContent = `${selectionText(q)} · ${state.vlt}% · ${film}`;
 }
-els.nudge.addEventListener('click', (e) => {
-  const id = e.target.closest('[data-add-zone]')?.dataset.addZone;
-  if (id) toggleZone(id, { fromList: true });
-});
 els.ceramic.addEventListener('change', update);
 
 // ---------- Booking hand-off (js/script.js owns the form) ----------
 function book() {
   const q = currentQuote();
-  if (!q.windowCount) return;
+  if (!q.windowCount && !q.strip) return;
   const v = state.vehicle;
   const labels = ZONES.filter((z) => state.zones.has(z.id)).map((z) => z.label);
   const film = q.ceramic ? 'Ceramic' : 'Carbon';
+  const windowsText = [q.isAll ? `All windows (${labels.join(', ')})` : labels.join(', '), q.strip ? `Windshield strip (+${formatPrice(q.strip)})` : ''].filter(Boolean).join(' + ');
   document.dispatchEvent(new CustomEvent('dna:book', {
     detail: {
       vehicleType: q.categoryLabel,
       filmType: film,
       windowCount: q.windowCount,
-      windowsSelected: q.isFull ? `Full vehicle (${labels.join(', ')})` : labels.join(', '),
+      windowsSelected: windowsText,
+      windshieldStrip: q.strip ? `Yes (+${formatPrice(q.strip)})` : 'No',
       estimatedPrice: formatPrice(q.total),
       summaryTitle: q.categoryLabel,
-      summaryDetail: ` — ${film}, ${state.vlt}% VLT, ${q.isFull ? 'full vehicle' : labels.join(', ')}`,
+      summaryDetail: ` — ${film}, ${state.vlt}% VLT, ${selectionText(q)}`,
       previewVehicle: `${v.make} ${v.model}`,
     },
   }));
@@ -247,6 +279,8 @@ document.addEventListener('dna:custom-quote', customQuote);
 document.addEventListener('dna:quote-reset', () => {
   els.ceramic.checked = false;
   if (state.vehicle.id !== DEFAULT_VEHICLE_ID) selectVehicle(DEFAULT_VEHICLE_ID);
+  state.strip = false;
+  els.strip.checked = false;
   setZones(DEFAULT_ZONES);
 });
 
@@ -282,6 +316,8 @@ async function selectVehicle(id) {
   state.vehicle = v;
   syncVehicleCards();
   els.credit.textContent = v.credit || '';
+  if (v.poster && !els.stage.classList.contains('is-ready')) els.poster.src = v.poster;
+  if (!v.windshield?.strip && state.strip) setStrip(false);
   update();
   if (changedBody) animatePrice(currentQuote().total);
 
@@ -310,7 +346,7 @@ async function loadInViewer(v) {
   try {
     const done = await viewer.loadVehicle(v);
     if (!done) return; // another vehicle was picked meanwhile
-    viewer.setSelectedZones([...state.zones]);
+    viewer.setSelectedZones(selectedIds());
     viewer.setTint(state.vlt);
     viewer.setCompare(state.compare);
     const missing = ZONES.filter((z) => !viewer.availableZones().includes(z.id));
@@ -414,6 +450,7 @@ renderVehicles();
 renderZones();
 els.badgeVlt.textContent = `${state.vlt}%`;
 els.credit.textContent = state.vehicle.credit || '';
+if (state.vehicle.poster) els.poster.src = state.vehicle.poster;
 update();
 
 // Start downloading three.js + the model once the page itself has loaded and the studio is

@@ -2,6 +2,7 @@
 // Waiting on a licensed 3D model: drop it at assets/vehicles/c-class/c-class.glb, set
 // modelUrl, then map the glass (start with glass: 'auto' and ?studio-debug).
 export default {
+  enabled: false, // Hidden until a licensed C-Class model is available.
   id: 'c-class',
   make: 'Mercedes-Benz',
   model: 'C-Class',

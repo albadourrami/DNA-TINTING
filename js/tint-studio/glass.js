@@ -134,6 +134,12 @@ export class GlassZone {
     }
   }
 
+  /** Clip this zone's glass by a plane (used to split the windshield into strip + rest). */
+  setClip(plane) {
+    for (const m of [this.mat, this.tintMat, this.reflectMat]) if (m) { m.clippingPlanes = [plane]; m.needsUpdate = true; }
+    return this;
+  }
+
   /** ?studio-debug: paint each zone a solid color to check the window mapping. */
   setDebugColor(color) {
     this.debugColor = color ? new THREE.Color(color) : null;

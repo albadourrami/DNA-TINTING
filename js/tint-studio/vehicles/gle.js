@@ -2,6 +2,7 @@
 // Waiting on a licensed 3D model: drop it at assets/vehicles/gle/gle.glb, set modelUrl,
 // then map the glass (start with glass: 'auto' and ?studio-debug).
 export default {
+  enabled: false, // Hidden until a licensed GLE model is available.
   id: 'gle',
   make: 'Mercedes-Benz',
   model: 'GLE',

@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Rubik:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
-<link rel="preload" href="assets/vehicles/concept-demo/poster.webp" as="image" fetchpriority="low">
+<link rel="preload" href="assets/vehicles/audi-a3/poster.webp" as="image" fetchpriority="low">
 <!-- three.js for the Tint Studio. Pinned: core, addons and decoders must be the same release.
      Nothing here downloads until the studio scrolls near the viewport (js/tint-studio/main.js). -->
 <script type="importmap">
@@ -175,7 +175,7 @@
       <div class="studio-layout">
         <div class="studio-stage-col">
           <div class="studio-stage" id="studioStage">
-            <img class="studio-poster" id="studioPoster" src="assets/vehicles/concept-demo/poster.webp" alt="3D preview of a car with tinted windows" width="1600" height="1000" decoding="async">
+            <img class="studio-poster" id="studioPoster" src="assets/vehicles/audi-a3/poster.webp" alt="3D preview of a car with tinted windows" width="1600" height="1000" decoding="async">
             <img class="studio-photo" id="studioPhoto" alt="" hidden>
             <div class="studio-loading" id="studioLoading" role="status" hidden>
               <div class="studio-progress" aria-hidden="true"><span id="studioProgressBar"></span></div>
@@ -185,7 +185,7 @@
 
             <div class="studio-badge" aria-hidden="true">
               <span class="studio-badge-vlt" id="studioBadgeVlt">35%</span>
-              <span class="studio-badge-label">VLT<br><em id="studioBadgeCount">5 windows</em></span>
+              <span class="studio-badge-label">VLT<br><em id="studioBadgeCount">all 5 windows</em></span>
             </div>
 
             <div class="studio-toolbar" role="toolbar" aria-label="3D view controls">
@@ -237,19 +237,27 @@
           </div>
 
           <div class="studio-step">
-            <p class="studio-step-label" id="studioWindowsLabel"><span>3</span> Pick your windows <em class="studio-count" id="studioCount">5 of 6</em></p>
+            <p class="studio-step-label" id="studioWindowsLabel"><span>3</span> Pick your windows <em class="studio-count" id="studioCount">5 of 5</em></p>
             <div class="studio-packages" id="studioPackages" role="group" aria-label="Window packages"></div>
-            <div class="zone-map" id="zoneMap" role="group" aria-labelledby="studioWindowsLabel">
-              <svg class="zone-map-car" viewBox="0 0 200 330" aria-hidden="true">
-                <path d="M100 6c38 0 62 10 70 34l8 60v150l-6 48c-6 18-36 26-72 26s-66-8-72-26l-6-48V100l8-60C38 16 62 6 100 6z" />
-                <path class="zone-map-arrow" d="M100 18l-7 10h14z" />
-              </svg>
-            </div>
-            <p class="zone-map-legend"><span>Driver side</span><span>Passenger side</span></p>
+            <div class="zone-groups" id="zoneMap" aria-labelledby="studioWindowsLabel"></div>
+            <p class="zone-hint">Tip: tap a window on the car to add or remove it.</p>
+          </div>
+
+          <div class="studio-step studio-step--extra" id="studioStripStep">
+            <p class="studio-step-label"><span>4</span> Add-on service</p>
+            <label class="ceramic-toggle extra-toggle" id="stripToggleLabel">
+              <input type="checkbox" id="windshieldStripToggle">
+              <span class="ceramic-toggle-switch" aria-hidden="true"></span>
+              <span class="ceramic-toggle-copy">
+                <strong>Windshield strip <em class="extra-price" id="stripPrice">+$25</em></strong>
+                <span>Top windshield strip</span>
+              </span>
+            </label>
+            <p class="studio-disclaimer">The 3D preview is for illustration only &mdash; it isn&rsquo;t a guarantee that a tint setup is legal where you drive. Windshield and front-window limits vary by state; we&rsquo;ll confirm what&rsquo;s allowed before we install.</p>
           </div>
 
           <div class="studio-step studio-step--price" id="tint-price">
-            <p class="studio-step-label"><span>4</span> Film &amp; price</p>
+            <p class="studio-step-label"><span>5</span> Film &amp; price</p>
             <label class="ceramic-toggle" id="ceramicToggleLabel">
               <input type="checkbox" id="ceramicUpgradeToggle">
               <span class="ceramic-toggle-switch" aria-hidden="true"></span>
@@ -286,7 +294,7 @@
 
             <div class="studio-quote" id="pricingResult" role="status">
               <div class="pricing-result-top">
-                <span class="pricing-result-label" id="pricingResultLabel">Sedan / Coupe &middot; Carbon &middot; 5 windows</span>
+                <span class="pricing-result-label" id="pricingResultLabel">Sedan / Coupe &middot; Carbon &middot; all 5 windows</span>
                 <span class="pricing-result-price" id="pricingResultPrice">$250</span>
               </div>
               <p class="pricing-result-note" id="pricingResultNote"></p>
@@ -297,13 +305,14 @@
         </div>
       </div>
       <p class="studio-credit" id="studioCredit"></p>
+      <p class="studio-illustration">Vehicles shown are 3D illustrations. Actual tint appearance varies with lighting, film and your vehicle&rsquo;s factory glass.</p>
     </div>
 
     <!-- Phones: the running total stays in reach while scrolling the options. -->
     <div class="studio-bar" id="studioBar" aria-hidden="true">
       <div class="studio-bar-info">
         <strong id="studioBarPrice">$250</strong>
-        <span id="studioBarDetail">5 windows &middot; 35% &middot; Carbon</span>
+        <span id="studioBarDetail">all 5 windows &middot; 35% &middot; Carbon</span>
       </div>
       <button type="button" class="btn btn-primary btn-sm" id="studioBarBook" tabindex="-1">Book</button>
     </div>
@@ -660,6 +669,7 @@
           <input type="hidden" id="pricingFilmTypeField" name="filmType" value="">
           <input type="hidden" id="pricingWindowCountField" name="windowCount" value="">
           <input type="hidden" id="pricingWindowsSelectedField" name="windowsSelected" value="">
+          <input type="hidden" id="pricingWindshieldStripField" name="windshieldStrip" value="">
           <input type="hidden" id="pricingEstimatedPriceField" name="estimatedPrice" value="">
           <div class="form-grid form-grid-2">
             <div class="field">

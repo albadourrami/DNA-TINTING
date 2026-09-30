@@ -103,6 +103,7 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
   renderer.toneMapping = THREE.AgXToneMapping;
   renderer.toneMappingExposure = 1.25;
   renderer.shadowMap.enabled = true;
+  renderer.localClippingEnabled = true; // windshield strip is cut with a clipping plane
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.shadowMap.autoUpdate = false;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, tier === 'fast' ? 1.5 : 2));
@@ -268,7 +269,10 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     const r = renderer.domElement.getBoundingClientRect();
     ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    const hit = raycaster.intersectObject(model, true).find((h) => isShown(h.object));
+    // Skip hidden meshes and the clipped-away side of clipped glass (the strip and the rest
+    // of the windshield share one surface; only the visible part may answer a click).
+    const hit = raycaster.intersectObject(model, true)
+      .find((h) => isShown(h.object) && (!h.object.userData.clip || h.object.userData.clip.distanceToPoint(h.point) >= 0));
     return hit?.object.userData.zoneId || null;
   }
   let down = null;
@@ -341,6 +345,50 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     pickables = [];
   }
 
+  // ---------- Windshield strip: the top band of the windshield, as its own zone ----------
+  // Works on any model without re-cutting geometry: the windshield meshes are drawn twice,
+  // each copy clipped by one side of a plane `depth` meters below the top edge (measured
+  // along the glass). The upper copy is the tintable strip; the lower stays factory glass.
+  function setupWindshieldStrip(v) {
+    const ws = zones.get('windshield');
+    const spec = v.windshield?.strip;
+    if (!ws || !spec) return;
+    const pts = [];
+    const p = new THREE.Vector3();
+    for (const m of ws.meshes) {
+      m.updateWorldMatrix(true, false);
+      const pos = m.geometry.attributes.position;
+      const step = Math.max(1, Math.floor(pos.count / 4000));
+      for (let i = 0; i < pos.count; i += step) pts.push(p.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld).clone());
+    }
+    const ys = pts.map((q) => q.y);
+    const yMin = Math.min(...ys), yMax = Math.max(...ys), band = (yMax - yMin) * 0.1;
+    const avg = (list) => list.reduce((a, q) => a.add(q), new THREE.Vector3()).divideScalar(list.length || 1);
+    const top = avg(pts.filter((q) => q.y > yMax - band));
+    const bottom = avg(pts.filter((q) => q.y < yMin + band));
+    const up = top.clone().sub(bottom).normalize();          // up the glass, toward the roof
+    const topEdge = Math.max(...pts.map((q) => q.dot(up)));
+    const cut = topEdge - (spec.depth ?? 0.127);
+    const stripPlane = new THREE.Plane(up.clone(), -cut);          // keeps the band above the cut
+    const restPlane = new THREE.Plane(up.clone().negate(), cut);   // keeps everything below
+    const stripMeshes = ws.meshes.map((m) => {
+      const c = new THREE.Mesh(m.geometry, m.material);
+      c.name = `${m.name}__strip`;
+      c.position.copy(m.position); c.quaternion.copy(m.quaternion); c.scale.copy(m.scale);
+      c.renderOrder = m.renderOrder + 1;
+      c.userData.zoneId = 'windshieldStrip';
+      c.userData.clip = stripPlane;
+      m.parent.add(c);
+      m.userData.clip = restPlane;
+      return c;
+    });
+    ws.setClip(restPlane);
+    const strip = new GlassZone('windshieldStrip', stripMeshes, tier, scene.environment);
+    strip.setClip(stripPlane);
+    zones.set('windshieldStrip', strip);
+    pickables.push(...stripMeshes);
+  }
+
   async function loadVehicle(v) {
     const token = ++loadToken;
     emit('progress', { ratio: 0 });
@@ -379,16 +427,19 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
         const ov = overrides[m.name];
         if (ov) for (const [k, val] of Object.entries(ov)) { if (m[k]?.isColor) m[k].set(val); else m[k] = val; }
         if (m.map) m.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        if (m.transparent) m.depthWrite = false; // lamp covers etc.: no sorting holes
       }
     });
 
     // Windows → zones.
     const { zones: zoneMeshes, otherGlass, report } = buildGlassZones(pivot, model, v);
     for (const [id, meshes] of zoneMeshes) {
-      for (const m of meshes) m.userData.zoneId = id;
+      // The windshield itself is never selectable (only its strip is), so it has no zoneId.
+      for (const m of meshes) m.userData.zoneId = id === 'windshield' ? null : id;
       zones.set(id, new GlassZone(id, meshes, tier, scene.environment));
       pickables.push(...meshes);
     }
+    setupWindshieldStrip(v);
     for (const m of otherGlass) {
       if (tier === 'fast' && [].concat(m.material).some((x) => x.transmission > 0)) {
         const fm = factoryGlassMaterial(tier, [].concat(m.material)[0].side);
@@ -399,7 +450,7 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     if (debug) {
       console.groupCollapsed(`[tint-studio] ${v.make} ${v.model}: glass analysis`);
       console.table(report);
-      const palette = { windshield: '#ff3b30', frontDriver: '#34c759', frontPassenger: '#0a84ff', rearDriver: '#ffcc00', rearPassenger: '#bf5af2', rearWindow: '#ff9500' };
+      const palette = { windshieldStrip: '#ff2d55', windshield: '#8e8e93', frontDriver: '#34c759', frontPassenger: '#0a84ff', rearDriver: '#ffcc00', rearPassenger: '#bf5af2', rearWindow: '#ff9500' };
       for (const [id, z] of zones) z.setDebugColor(palette[id]);
       console.log('Zones found:', [...zones.keys()]);
       console.groupEnd();
@@ -458,7 +509,7 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     setCompare(on) { compare = !!on; applyZoneTargets(); },
     /** Subtle glow on the given zones — "these windows just changed". */
     pulse(ids = [...selected]) { for (const id of ids) zones.get(id)?.set({ glow: 0.55 }); invalidate(); },
-    availableZones: () => [...zones.keys()],
+    availableZones: () => [...zones.keys()].filter((id) => id !== 'windshield'),
     view(name, ms) { userInteracted = true; return frame(viewFor(name), ms); },
     resetView(ms) { userInteracted = false; return frame(currentHeroView(), ms); },
     setAutoRotate(on) { controls.autoRotate = !!on && !reducedMotion(); invalidate(); },
