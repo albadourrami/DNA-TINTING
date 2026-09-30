@@ -17,7 +17,7 @@ import * as THREE from 'three';
 const FACTORY = { vlt: 0.8, color: new THREE.Color('#d9ebe3') };
 // Film: neutral charcoal, very slightly cool.
 const FILM = { color: new THREE.Color('#1b2129') };
-const HIGHLIGHT = new THREE.Color('#3b82f6');
+const HIGHLIGHT = new THREE.Color('#4f9bff');
 
 // Perceived darkness: a studio interior is brighter than a real cabin, so linear VLT alone
 // looks too light. The exponent pulls mid shades darker, matching real-world photos
@@ -38,6 +38,8 @@ export class GlassZone {
     this.cur = { amount: 0, vlt: 0.35, glow: 0 };
     this.target = { amount: 0, vlt: 0.35, glow: 0 };
     this.hover = false;
+    this.focus = false;     // the window the customer is editing: soft breathing glow
+    this.time = 0;
     this.layers = [];
     const side = meshes[0] ? [].concat(meshes[0].material)[0]?.side ?? THREE.DoubleSide : THREE.DoubleSide;
     if (tier === 'ultra') this.buildUltra(side); else this.buildFast(side);
@@ -106,13 +108,16 @@ export class GlassZone {
   /** Eases toward the target; returns true while still changing (keeps rendering). */
   update(dt) {
     const c = this.cur, t = this.target;
-    c.amount = damp(c.amount, t.amount, dt);
-    c.vlt = damp(c.vlt, t.vlt, dt);
-    // Glow pulses decay; hover holds a soft steady glow.
-    t.glow = this.hover ? 0.22 : 0;
-    c.glow = damp(c.glow, t.glow, dt, this.hover ? 14 : 3.2);
+    this.time += dt;
+    // Tint changes ease in like film being laid down: quick start, soft landing.
+    c.amount = damp(c.amount, t.amount, dt, 7);
+    c.vlt = damp(c.vlt, t.vlt, dt, 7);
+    // Glow: focus breathes gently, hover holds steady, change-pulses decay.
+    const breathe = this.focus ? 0.34 + 0.12 * Math.sin(this.time * 3.2) : 0;
+    t.glow = Math.max(this.hover ? 0.26 : 0, breathe);
+    c.glow = damp(c.glow, t.glow, dt, this.hover || this.focus ? 12 : 3.2);
     this.apply();
-    return Math.abs(c.amount - t.amount) > 1e-3 || Math.abs(c.vlt - t.vlt) > 1e-3 || Math.abs(c.glow - t.glow) > 2e-3;
+    return this.focus || Math.abs(c.amount - t.amount) > 1e-3 || Math.abs(c.vlt - t.vlt) > 1e-3 || Math.abs(c.glow - t.glow) > 2e-3;
   }
 
   apply() {

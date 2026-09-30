@@ -1,28 +1,30 @@
 // Tint Studio pricing — the single place to change prices.
 //
-// Every window starts with Carbon film; Ceramic is an optional upgrade. Picking every
-// tintable window uses the "allWindows" price. The windshield strip is a separate add-on.
+// Every window starts with Carbon film at a per-window price; picking every tintable
+// window uses the "allWindows" price. Tint percentage never changes the price, so
+// customers can mix shades freely. Ceramic is ONE flat upgrade for the whole vehicle
+// (film type can't be mixed between windows). The windshield strip is a separate add-on.
 // A vehicle can override any of these in its config (vehicles/*.js → `pricing`).
 
 // Windshield strip add-on price (USD). Change it here — or per vehicle via pricing.windshieldStrip.
 export const WINDSHIELD_STRIP_PRICE = 25;
+// Ceramic upgrade (USD), charged once per vehicle — not per window.
+export const CERAMIC_UPGRADE_PRICE = 100;
 
 export const DEFAULT_PRICING = {
   sedan: {
     label: 'Sedan / Coupe',
     perWindow: 50,
-    allWindows: 250,          // all 5 windows (+ $25 strip = the old $275 full-vehicle price)
-    ceramic: { perWindow: 20, allWindows: 100 },
+    allWindows: 250,
+    ceramicUpgrade: CERAMIC_UPGRADE_PRICE,
     windshieldStrip: WINDSHIELD_STRIP_PRICE,
-    windshieldStripCeramic: 0, // extra for a ceramic strip; 0 = same price for either film
   },
   suv_truck: {
     label: 'SUV / Truck',
     perWindow: 50,
-    allWindows: 274,          // all 5 windows (+ $25 strip = the old $299 full-vehicle price)
-    ceramic: { perWindow: 20, allWindows: 100 },
+    allWindows: 250,
+    ceramicUpgrade: CERAMIC_UPGRADE_PRICE,
     windshieldStrip: WINDSHIELD_STRIP_PRICE,
-    windshieldStripCeramic: 0,
   },
 };
 
@@ -39,27 +41,29 @@ export function pricingFor(vehicle) {
 
 /**
  * @param {object} pricing      from pricingFor(vehicle)
- * @param {number} windowCount  selected tintable windows
+ * @param {number} windowCount  selected tintable windows (any mix of shades)
  * @param {number} totalWindows tintable windows the vehicle has
  * @param {{ ceramic?: boolean, strip?: boolean }} options
  */
 export function quote(pricing, windowCount, totalWindows, { ceramic = false, strip = false } = {}) {
   const isAll = windowCount > 0 && windowCount >= totalWindows;
   const carbon = isAll ? pricing.allWindows : pricing.perWindow * windowCount;
-  const upgrade = !windowCount ? 0 : isAll ? pricing.ceramic.allWindows : pricing.ceramic.perWindow * windowCount;
-  const stripPrice = strip ? pricing.windshieldStrip + (ceramic ? pricing.windshieldStripCeramic : 0) : 0;
+  const stripPrice = strip ? pricing.windshieldStrip : 0;
+  const anything = windowCount > 0 || strip;
+  const upgrade = ceramic && anything ? pricing.ceramicUpgrade : 0;
   return {
     categoryLabel: pricing.label,
     windowCount,
     isAll,
     carbon: Math.round(carbon),
-    upgrade: Math.round(upgrade),
     strip: Math.round(stripPrice),
     stripPrice: Math.round(pricing.windshieldStrip),
-    total: Math.round(carbon + (ceramic ? upgrade : 0) + stripPrice),
+    upgrade: Math.round(upgrade),
+    ceramicPrice: Math.round(pricing.ceramicUpgrade),
+    subtotal: Math.round(carbon + stripPrice),
+    total: Math.round(carbon + stripPrice + upgrade),
     ceramic,
     perWindow: pricing.perWindow,
-    ceramicPerWindow: pricing.ceramic.perWindow,
   };
 }
 

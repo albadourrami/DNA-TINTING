@@ -7,6 +7,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Reflector } from 'three/addons/objects/Reflector.js';
 import { buildGlassZones } from './glass-zones.js';
 import { GlassZone, factoryGlassMaterial } from './glass.js';
 
@@ -33,7 +34,9 @@ export function pickTier() {
   return coarsePointer() || lowMemory ? 'fast' : 'ultra';
 }
 
-// ---------- Studio lighting: a dark photo studio with softbox strips ----------
+// ---------- Studio lighting: a dark dealership studio with softbox strips ----------
+// Long, thin light strips are what make car paint look expensive: they draw crisp highlight
+// lines along the body. A cool rim from behind separates the car from the dark stage.
 function studioEnvironment(renderer) {
   const env = new THREE.Scene();
   const panel = (w, h, intensity, pos, lookAt, color = 0xffffff) => {
@@ -43,21 +46,26 @@ function studioEnvironment(renderer) {
     m.lookAt(...lookAt);
     env.add(m);
   };
-  const room = new THREE.Mesh(new THREE.BoxGeometry(40, 16, 40), new THREE.MeshBasicMaterial({ color: 0x161a22, side: THREE.BackSide }));
+  const room = new THREE.Mesh(new THREE.BoxGeometry(40, 16, 40), new THREE.MeshBasicMaterial({ color: 0x12161e, side: THREE.BackSide }));
   room.position.y = 7;
   env.add(room);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshBasicMaterial({ color: 0x1b1f27 }));
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshBasicMaterial({ color: 0x1d222b }));
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -0.95;
   env.add(floor);
-  panel(16, 3.2, 4, [0, 14.8, 0], [0, 0, 0]);                 // long overhead strip → hood/roof highlight
-  panel(22, 2.2, 3.2, [-19.5, 5, 0], [0, 4, 0]);                // side strips → door-line reflections
-  panel(22, 2.2, 3.2, [19.5, 5, 0], [0, 4, 0]);
-  panel(12, 5, 1.6, [0, 5, 19.5], [0, 3, 0]);                    // soft front fill
-  panel(12, 4, 2.2, [0, 6, -19.5], [0, 3, 0], 0xdbe7ff);         // cool rim from behind
-  panel(4, 9, 2.4, [-13, 5, 13], [0, 3, 0]);                     // vertical kicker, front-left
+  panel(18, 4.5, 3.4, [0, 14.8, 0], [0, 0, 0]);                  // big overhead softbox
+  panel(24, 0.7, 7.0, [0, 14.2, -4.5], [0, 0, -2]);              // thin overhead strips → roof/hood lines
+  panel(24, 0.7, 7.0, [0, 14.2, 4.5], [0, 0, 2]);
+  panel(26, 1.8, 3.6, [-19.5, 4.2, 0], [0, 3.6, 0]);             // side strips → door-line reflections
+  panel(26, 1.8, 3.6, [19.5, 4.2, 0], [0, 3.6, 0]);
+  panel(26, 0.5, 5.5, [-19.5, 7.5, 0], [0, 5, 0]);               // thin upper strips: shoulder-line sparkle
+  panel(26, 0.5, 5.5, [19.5, 7.5, 0], [0, 5, 0]);
+  panel(14, 5, 1.5, [0, 5, 19.5], [0, 3, 0]);                    // soft front fill
+  panel(14, 4, 2.6, [0, 6, -19.5], [0, 3, 0], 0xcfe0ff);         // cool rim from behind
+  panel(4, 10, 2.6, [-13, 5, 13], [0, 3, 0]);                    // vertical kickers
+  panel(4, 10, 1.6, [13, 5, -13], [0, 3, 0], 0xd6e6ff);
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const tex = pmrem.fromScene(env, 0.04).texture;
+  const tex = pmrem.fromScene(env, 0.035).texture;
   env.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
   pmrem.dispose();
   return tex;
@@ -115,6 +123,7 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
   const scene = new THREE.Scene();
   scene.environment = studioEnvironment(renderer);
   scene.environmentIntensity = 1.3;
+  scene.environmentRotation = new THREE.Euler();
 
   const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 200);
   const key = new THREE.DirectionalLight(0xffffff, 1.6);
@@ -136,6 +145,51 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
   shadowCatcher.rotation.x = -Math.PI / 2;
   shadowCatcher.receiveShadow = true;
   scene.add(floorGlow, contact, shadowCatcher);
+
+  // Showroom floor reflection (desktop tier only: it re-renders the car mirrored). A
+  // radial fade keeps it a soft pool under the car instead of a hard mirror edge.
+  let reflector = null;
+  let reflectPass = null;
+  if (tier === 'ultra' && !new URLSearchParams(location.search).has('no-reflection')) {
+    reflector = new Reflector(new THREE.PlaneGeometry(1, 1), {
+      textureWidth: 1024, textureHeight: 1024, color: 0x8a94a6,
+      shader: {
+        name: 'FadingReflector',
+        uniforms: { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null }, strength: { value: 0.32 } },
+        vertexShader: `uniform mat4 textureMatrix; varying vec4 vUv; varying vec2 vPlane;
+          #include <common>
+          #include <logdepthbuf_pars_vertex>
+          void main() { vUv = textureMatrix * vec4(position, 1.0); vPlane = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          #include <logdepthbuf_vertex>
+          }`,
+        fragmentShader: `uniform vec3 color; uniform sampler2D tDiffuse; uniform float strength; varying vec4 vUv; varying vec2 vPlane;
+          #include <logdepthbuf_pars_fragment>
+          void main() {
+            #include <logdepthbuf_fragment>
+            vec4 base = texture2DProj(tDiffuse, vUv);
+            float d = length((vPlane - 0.5) * vec2(1.0, 1.15)) * 2.0;
+            float fade = strength * (1.0 - smoothstep(0.18, 0.62, d));
+            gl_FragColor = vec4(base.rgb * color, fade);
+            #include <tonemapping_fragment>
+            #include <colorspace_fragment>
+          }`,
+      },
+    });
+    reflector.material.transparent = true;
+    reflector.material.depthWrite = false;
+    reflector.rotation.x = -Math.PI / 2;
+    reflector.renderOrder = -1;
+    // Run the mirror pass ourselves, before the main render: nested inside the main render
+    // (Reflector's default) it leaves the canvas blank with transmission glass in the scene.
+    reflectPass = reflector.onBeforeRender;
+    reflector.onBeforeRender = () => {};
+    scene.add(reflector);
+  }
+
+  // A soft fill inside the cabin keeps seats readable through the glass, so each shade's
+  // darkening is visible instead of every window reading as black.
+  const cabinLight = new THREE.PointLight(0xfff1dd, 0, 0, 2);
+  scene.add(cabinLight);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -164,9 +218,18 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
   let zones = new Map();          // zoneId → GlassZone
   let pickables = [];
   let extraMaterials = [];
-  let tint = 0.35;
-  let selected = new Set();
+  let defaultTint = 0.35;
+  let tints = new Map();            // zoneId → VLT 0..1 for every tinted window (mixable)
+  let focusId = null;               // window being edited (breathing highlight)
+  let anchors = new Map();          // zoneId → { point, out } for placing UI next to a window
   let compare = false;
+  let entrance = null;              // camera sweep + lights-up when a car arrives
+  let idleSpin = tier === 'ultra';  // slow turntable when nobody's touching the car (desktop: saves phone battery)
+  let lastInteraction = performance.now();
+  let envTurn = 0;                  // drifting reflections while the turntable runs
+  const parallax = { x: 0, y: 0, tx: 0, ty: 0 };
+  const baseEnvIntensity = 1.3;
+  const baseKey = 1.6;
   let needsRender = true;
   let visible = true;
   let tween = null;
@@ -184,9 +247,21 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    applyViewShift();
     if (model && Math.abs(prevAspect - camera.aspect) > 1e-3 && !userInteracted) frame(currentHeroView(), 0);
     else if (model) updateLimits();
+    // setSize() clears the canvas: draw right away so a resizing stage never flashes empty.
+    if (model && visible) { controls.update(); draw(); }
     invalidate();
+  }
+
+  // Vertical frame shift (px): lifts the car when UI docks over the bottom of the stage.
+  let viewShift = 0;
+  let viewShiftTarget = 0;
+  function applyViewShift() {
+    const w = container.clientWidth || 1, h = container.clientHeight || 1;
+    if (Math.abs(viewShift) < 0.5) camera.clearViewOffset();
+    else camera.setViewOffset(w, h, 0, viewShift, w, h);
   }
   const ro = new ResizeObserver(resize);
   ro.observe(container);
@@ -248,15 +323,22 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
 
   controls.addEventListener('start', () => {
     tween = null;
+    entrance = null;
     userInteracted = true;
     controls.autoRotate = false;
+    lastInteraction = performance.now();
     emit('interaction');
   });
+  controls.addEventListener('end', () => { lastInteraction = performance.now(); });
   controls.addEventListener('change', invalidate);
 
   // ---------- Zone state → materials ----------
   function applyZoneTargets() {
-    for (const [id, z] of zones) z.set({ amount: !compare && selected.has(id) ? 1 : 0, vlt: tint });
+    for (const [id, z] of zones) {
+      const vlt = tints.get(id);
+      z.set({ amount: !compare && vlt !== undefined ? 1 : 0, vlt: vlt ?? z.target.vlt });
+      z.focus = id === focusId;
+    }
     invalidate();
   }
 
@@ -286,7 +368,11 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     down = null;
     if (moved > 6 || !quick) return;
     const zoneId = zoneAt(e.clientX, e.clientY);
-    if (zoneId) emit('zoneclick', { zoneId });
+    lastInteraction = performance.now();
+    if (zoneId) {
+      const r = renderer.domElement.getBoundingClientRect();
+      emit('zoneclick', { zoneId, x: e.clientX - r.left, y: e.clientY - r.top });
+    } else emit('emptyclick');
   });
   let hoverId = null;
   let hoverPending = false;
@@ -305,7 +391,15 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
       invalidate();
     }, 70);
   });
+  // Desktop: the studio light and reflections lean slightly toward the cursor.
+  if (!mobile) container.addEventListener('pointermove', (e) => {
+    if (e.buttons) return;
+    const r = container.getBoundingClientRect();
+    parallax.tx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+    parallax.ty = ((e.clientY - r.top) / r.height - 0.5) * 2;
+  });
   renderer.domElement.addEventListener('pointerleave', () => {
+    parallax.tx = parallax.ty = 0;
     if (hoverId) { zones.get(hoverId).hover = false; hoverId = null; renderer.domElement.style.cursor = ''; emit('zonehover', { zoneId: null }); invalidate(); }
   });
 
@@ -316,13 +410,95 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     timer.update(now);
     const dt = Math.min(timer.getDelta(), 0.1);
     if (!visible || !model) return;
-    if (stepTween(now)) needsRender = true;
-    else if (controls.update(dt)) needsRender = true;
+    if (stepEntrance(now)) needsRender = true;
+    else if (stepTween(now)) needsRender = true;
+    else {
+      // Idle turntable: after a few quiet seconds the car slowly turns and its reflections drift.
+      const idle = idleSpin && !focusId && !reducedMotion() && now - lastInteraction > 7000;
+      controls.autoRotate = idle;
+      if (idle) { envTurn += dt * 0.05; scene.environmentRotation.y = envTurn; }
+      if (controls.update(dt)) needsRender = true;
+    }
+    if (Math.abs(viewShiftTarget - viewShift) > 0.3) {
+      viewShift += (viewShiftTarget - viewShift) * (reducedMotion() ? 1 : 1 - Math.exp(-9 * dt));
+      if (Math.abs(viewShiftTarget - viewShift) <= 0.3) viewShift = viewShiftTarget;
+      applyViewShift();
+      needsRender = true;
+    }
+    // cursor parallax: ease the light toward the pointer
+    if (!mobile && Math.abs(parallax.tx - parallax.x) + Math.abs(parallax.ty - parallax.y) > 1e-3) {
+      parallax.x += (parallax.tx - parallax.x) * (1 - Math.exp(-4 * dt));
+      parallax.y += (parallax.ty - parallax.y) * (1 - Math.exp(-4 * dt));
+      scene.environmentRotation.y = envTurn + parallax.x * 0.22;
+      placeKeyLight();
+      needsRender = true;
+    }
     for (const z of zones.values()) if (z.update(dt)) needsRender = true;
     if (!needsRender) return;
     needsRender = false;
+    draw();
+    emit('render');
+  }
+
+  function draw() {
+    if (reflectPass) reflectPass.call(reflector, renderer, scene, camera);
     renderer.render(scene, camera);
   }
+
+  // Key light position, nudged by the cursor so the shadow shifts a touch (desktop).
+  let lightRadius = 3;
+  function placeKeyLight() {
+    const r = lightRadius;
+    key.position.set(r * (0.6 + parallax.x * 0.35), r * 3.2, r * (1.2 + parallax.y * 0.3));
+    key.target.position.copy(target);
+    renderer.shadowMap.needsUpdate = true;
+  }
+
+  // Entrance: the camera glides in from a wide, low angle while the studio lights come up.
+  function playEntrance(ms = 2400) {
+    if (reducedMotion() || !model) { scene.environmentIntensity = baseEnvIntensity; key.intensity = baseKey; frame(currentHeroView(), 0); return; }
+    const hero = currentHeroView();
+    const start = { ...hero, azimuth: hero.azimuth - 62, elevation: 3, distance: 1.55 };
+    frame(start, 0);
+    const from = new THREE.Spherical().setFromVector3(camera.position.clone().sub(target));
+    const end = new THREE.Spherical().setFromVector3(positionFor(hero).sub(target));
+    entrance = { from, end, t0: performance.now(), ms };
+    scene.environmentIntensity = 0.15;
+    key.intensity = 0;
+    invalidate();
+  }
+  function stepEntrance(now) {
+    if (!entrance) return false;
+    const k = Math.min(1, (now - entrance.t0) / entrance.ms);
+    const e = 1 - Math.pow(1 - k, 4); // easeOutQuart: fast arrival, long graceful settle
+    camera.position.setFromSpherical(new THREE.Spherical(
+      THREE.MathUtils.lerp(entrance.from.radius, entrance.end.radius, e),
+      THREE.MathUtils.lerp(entrance.from.phi, entrance.end.phi, e),
+      THREE.MathUtils.lerp(entrance.from.theta, entrance.end.theta, e),
+    )).add(target);
+    controls.target.copy(target);
+    const lights = Math.min(1, k * 1.6);
+    scene.environmentIntensity = THREE.MathUtils.lerp(0.15, baseEnvIntensity, lights);
+    key.intensity = baseKey * lights;
+    if (k >= 1) { entrance = null; lastInteraction = performance.now(); emit('entrance-done'); }
+    return true;
+  }
+
+  // Anchor per window: a point on the glass plus the direction it faces (for UI placement).
+  function computeAnchors() {
+    anchors = new Map();
+    const center = bounds.getCenter(new THREE.Vector3());
+    for (const [id, z] of zones) {
+      if (id === 'windshield') continue;
+      const box = new THREE.Box3();
+      for (const m of z.meshes) box.expandByObject(m);
+      let point = box.getCenter(new THREE.Vector3());
+      if (id === 'windshieldStrip' && stripAnchor) point = stripAnchor.clone();
+      const out = point.clone().sub(center).setY(0).normalize();
+      anchors.set(id, { point, out });
+    }
+  }
+  let stripAnchor = null;
   requestAnimationFrame(loop);
 
   // ---------- Loading ----------
@@ -370,6 +546,8 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     const topEdge = Math.max(...pts.map((q) => q.dot(up)));
     const cut = topEdge - (spec.depth ?? 0.127);
     const stripPlane = new THREE.Plane(up.clone(), -cut);          // keeps the band above the cut
+    const topPts = pts.filter((q) => q.dot(up) > cut);
+    stripAnchor = avg(topPts.length ? topPts : pts);
     const restPlane = new THREE.Plane(up.clone().negate(), cut);   // keeps everything below
     const stripMeshes = ws.meshes.map((m) => {
       const c = new THREE.Mesh(m.geometry, m.material);
@@ -460,13 +638,16 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     const radius = bounds.getBoundingSphere(new THREE.Sphere()).radius;
     const extent = Math.max(size.x, size.z);
     floorGlow.scale.set(extent * 2.6, extent * 2.6, 1);
+    if (reflector) { reflector.scale.set(extent * 2.2, extent * 2.2, 1); reflector.position.y = 0; }
+    cabinLight.position.set(0, size.y * 0.62, 0);
+    cabinLight.intensity = 0.9 * radius;
     contact.scale.set(size.x * 1.25, size.z * 1.12, 1);
     shadowCatcher.scale.set(extent * 3, extent * 3, 1);
     floorGlow.position.y = 0.001;
     contact.position.y = 0.002;
     shadowCatcher.position.y = 0.003;
-    key.position.set(radius * 0.6, radius * 3.2, radius * 1.2);
-    key.target.position.copy(target);
+    lightRadius = radius;
+    placeKeyLight();
     const s = key.shadow;
     s.mapSize.setScalar(mobile ? 1024 : 2048);
     s.camera.left = s.camera.bottom = -radius * 1.1;
@@ -482,15 +663,19 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     camera.near = radius / 50;
     camera.far = radius * 60;
     camera.updateProjectionMatrix();
+    focusId = null;
     applyZoneTargets();
     for (const z of zones.values()) { z.cur = { ...z.target }; z.apply(); } // no fade-in on load
+    computeAnchors();
     userInteracted = false;
     frame(currentHeroView(), 0);
     controls.autoRotate = false;
+    lastInteraction = performance.now();
 
     // Compile shaders now so the first interaction doesn't hitch.
     if (renderer.extensions.has('KHR_parallel_shader_compile')) await renderer.compileAsync(scene, camera).catch(() => {});
     else renderer.compile(scene, camera);
+    playEntrance();
     invalidate();
     emit('load', { vehicle: v, zones: [...zones.keys()] });
     return true;
@@ -502,21 +687,64 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     events,
     on(type, fn) { const h = (e) => fn(e.detail); events.addEventListener(type, h); return () => events.removeEventListener(type, h); },
     loadVehicle,
-    /** Film VLT in percent (5–70). Continuous values are fine (slider drag). */
-    setTint(vltPercent) { tint = THREE.MathUtils.clamp(vltPercent / 100, 0.01, 1); applyZoneTargets(); },
-    setSelectedZones(ids) { selected = new Set(ids); applyZoneTargets(); },
+    /** Per-window tints: { zoneId: vltPercent }. Windows not listed show factory glass. */
+    setZoneTints(map) {
+      tints = new Map(Object.entries(map).map(([id, v]) => [id, THREE.MathUtils.clamp(v / 100, 0.01, 1)]));
+      applyZoneTargets();
+    },
+    getZoneTints: () => Object.fromEntries([...tints].map(([id, v]) => [id, Math.round(v * 100)])),
+    /** Every tinted window to one VLT (percent). Continuous values are fine (slider drag). */
+    setTint(vltPercent) {
+      defaultTint = THREE.MathUtils.clamp(vltPercent / 100, 0.01, 1);
+      for (const id of tints.keys()) tints.set(id, defaultTint);
+      applyZoneTargets();
+    },
+    /** Which windows are tinted (keeps each one's shade; new ones get the last slider shade). */
+    setSelectedZones(ids) {
+      tints = new Map(ids.map((id) => [id, tints.get(id) ?? defaultTint]));
+      applyZoneTargets();
+    },
+    /** Highlight the window being edited (null to clear). */
+    focusZone(id) { focusId = id || null; lastInteraction = performance.now(); applyZoneTargets(); },
+    /** Where a window is on screen, for pinning UI to it: container px + whether it faces us. */
+    projectZone(id) {
+      const a = anchors.get(id);
+      if (!a) return null;
+      camera.updateMatrixWorld();
+      const p = a.point.clone().project(camera);
+      const w = container.clientWidth, h = container.clientHeight;
+      const toCam = camera.position.clone().sub(a.point).setY(0).normalize();
+      return { x: ((p.x + 1) / 2) * w, y: ((1 - p.y) / 2) * h, onScreen: Math.abs(p.x) < 1 && Math.abs(p.y) < 1 && p.z < 1, facing: a.out.dot(toCam) > -0.15 };
+    },
+    /** Where the whole vehicle is on screen (container px), to keep UI off the car. */
+    projectBounds() {
+      if (!model) return null;
+      camera.updateMatrixWorld();
+      const w = container.clientWidth, h = container.clientHeight, p = new THREE.Vector3();
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let i = 0; i < 8; i++) {
+        p.set(i & 1 ? bounds.max.x : bounds.min.x, i & 2 ? bounds.max.y : bounds.min.y, i & 4 ? bounds.max.z : bounds.min.z).project(camera);
+        const x = ((p.x + 1) / 2) * w, y = ((1 - p.y) / 2) * h;
+        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      }
+      return { x0, y0, x1, y1 };
+    },
+    /** Reserve space at the bottom of the stage (px): the car glides up to stay clear of it. */
+    setFrameInset(bottom = 0) { viewShiftTarget = bottom / 2; invalidate(); },
+    playEntrance,
+    setIdleSpin(on) { idleSpin = !!on; lastInteraction = performance.now(); invalidate(); },
     /** Show factory glass everywhere (before/after comparison). */
     setCompare(on) { compare = !!on; applyZoneTargets(); },
     /** Subtle glow on the given zones — "these windows just changed". */
-    pulse(ids = [...selected]) { for (const id of ids) zones.get(id)?.set({ glow: 0.55 }); invalidate(); },
+    pulse(ids = [...tints.keys()]) { for (const id of ids) zones.get(id)?.set({ glow: 0.55 }); invalidate(); },
     availableZones: () => [...zones.keys()].filter((id) => id !== 'windshield'),
-    view(name, ms) { userInteracted = true; return frame(viewFor(name), ms); },
+    view(name, ms) { userInteracted = true; entrance = null; lastInteraction = performance.now(); return frame(viewFor(name), ms); },
     resetView(ms) { userInteracted = false; return frame(currentHeroView(), ms); },
     setAutoRotate(on) { controls.autoRotate = !!on && !reducedMotion(); invalidate(); },
     /** Full control (fullscreen): let one-finger drags orbit freely on phones. */
     setFreeTouch(on) { setTouchAction(on || !mobile ? 'none' : 'pan-y'); },
     resize,
-    screenshot() { renderer.render(scene, camera); return renderer.domElement.toDataURL('image/webp', 0.9); },
+    screenshot() { draw(); return renderer.domElement.toDataURL('image/webp', 0.9); },
     dispose() {
       disposed = true;
       ro.disconnect();
@@ -529,7 +757,7 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
       renderer.domElement.remove();
     },
     // for tests / debugging
-    get _internals() { return { scene, camera, controls, renderer, zones }; },
+    get _internals() { return { scene, camera, controls, renderer, zones, anchors }; },
   };
   resize();
   return api;

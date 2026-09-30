@@ -38,10 +38,14 @@ export const PACKAGES = [
 // What the studio shows before the customer touches anything.
 export const DEFAULT_ZONES = ZONE_IDS;
 
-// The VLT shades DNA Tinting installs (must match ALLOWED_SHADES in js/script.js).
+// The VLT shades DNA Tinting installs — the only list to edit to add/remove a shade.
+// Keep in sync with ALLOWED_SHADES in js/script.js (the "all windows" slider).
 export const SHADES = [
-  { vlt: 5, name: 'Limo Black', desc: 'Limo black — maximum privacy' },
+  { vlt: 5, name: 'Limo', desc: 'Limo black — maximum privacy' },
   { vlt: 20, name: 'Dark', desc: 'Dark, high privacy' },
-  { vlt: 35, name: 'Most Popular', desc: 'Most popular daily-driver shade' },
+  { vlt: 35, name: 'Popular', desc: 'Most popular daily-driver shade' },
+  { vlt: 50, name: 'Medium', desc: 'Light tint, subtle heat cut' },
   { vlt: 70, name: 'Light', desc: 'Light — near factory glass' },
 ];
+export const DEFAULT_VLT = 35;
+export const shadeByVlt = (vlt) => SHADES.find((s) => s.vlt === vlt);

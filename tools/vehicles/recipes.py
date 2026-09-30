@@ -14,13 +14,18 @@ import math, os
 ROLES = {
     'paint':             dict(color=(0.78, 0.79, 0.81), metal=0.85, rough=0.32, coat=1.0, coat_rough=0.03),
     'paint_white':       dict(color=(0.93, 0.93, 0.92), metal=0.1, rough=0.3, coat=1.0, coat_rough=0.03),
+    # Premium metallic blue (think Navarra / Portimao blue): the color tints the metallic
+    # reflections, the clearcoat adds the wet top layer.
+    'paint_blue':        dict(color=(0.07, 0.22, 0.58), metal=0.7, rough=0.3, coat=1.0, coat_rough=0.015),
+    # Same blue, less metallic flake: hides panel waviness on lower-quality source meshes.
+    'paint_blue_soft':   dict(color=(0.08, 0.23, 0.6), metal=0.42, rough=0.36, coat=1.0, coat_rough=0.02),
     'trim_black':        dict(color=(0.035, 0.035, 0.04), rough=0.55),
     'trim_gloss_black':  dict(color=(0.02, 0.02, 0.022), rough=0.3, coat=0.3),
     'chrome':            dict(color=(0.97, 0.97, 0.98), metal=1.0, rough=0.06),
     'black_chrome':      dict(color=(0.22, 0.22, 0.24), metal=1.0, rough=0.12),
-    'alloy':             dict(color=(0.80, 0.81, 0.83), metal=1.0, rough=0.24),
+    'alloy':             dict(color=(0.74, 0.75, 0.78), metal=1.0, rough=0.2),
     'alloy_dark':        dict(color=(0.30, 0.31, 0.33), metal=1.0, rough=0.28),
-    'rubber':            dict(color=(0.04, 0.04, 0.04), rough=0.88),
+    'rubber':            dict(color=(0.055, 0.055, 0.058), rough=0.93),
     'undercarriage':     dict(color=(0.025, 0.025, 0.025), rough=0.92),
     'interior_leather':  dict(color=(0.60, 0.50, 0.40), rough=0.55),   # light "macchiato" leather: tint reads clearly against it
     'interior_dark':     dict(color=(0.06, 0.06, 0.065), rough=0.5),
@@ -45,19 +50,19 @@ RECIPES = {
         object_materials={'AUDIARMA.001': 'EmblemFront'},
         split_materials={'ARRAY': ['Material.006']},      # grille bars share the paint material
         materials={
-            'Glass.002': 'glass', 'Material.006': 'paint_white', 'Material.003': 'trim_gloss_black',
+            'Glass.002': 'glass', 'Material.006': 'paint_blue_soft', 'Material.003': 'trim_gloss_black',
             'BACKHEADLIGHTS': 'tail_tex', 'emitters': 'drl', 'Black.001': 'trim_black', 'Material.018': 'indicator',
             'Rubber': 'trim_black', 'tyyre': 'tire_tex', 'Steel': 'alloy', 'Material.001': 'chrome',
             'EmblemFront': 'chrome', 'Material.011': 'plate', 'ARRAY/Material.006': 'trim_gloss_black',
         },
         roles={
             'tail_tex': dict(color=(1, 1, 1), rough=0.15, texture='src:Back Headlight.jpg', texture_emit=True, emit_strength=0.6),
-            'tire_tex': dict(color=(1, 1, 1), rough=0.85, texture='src:Tire.tga'),
+            'tire_tex': dict(color=(0.55, 0.55, 0.55), rough=0.92, texture='src:Tire.tga'),
         },
         beltline_z=0.6,
         smooth_angle=40,
         # the single-frame grille lattice is modeled into the body with the paint material
-        regions=[dict(**{'from': 'paint_white', 'to': 'trim_gloss_black'}, x=(-0.38, 0.38), y=(-2.25, -1.95), z=(0.4, 0.7), facing=0.6)],
+        regions=[dict(**{'from': 'paint_blue_soft', 'to': 'trim_gloss_black'}, x=(-0.38, 0.38), y=(-2.25, -1.95), z=(0.4, 0.7), facing=0.6)],
 
         interior=dict(seat='interior_leather', dark='interior_dark', trim='interior_trim', headliner='headliner'),
         plates=[dict(role='plate')],
@@ -68,14 +73,14 @@ RECIPES = {
         drop=['Cylinder', 'Cylinder.001'],
         weld=0.0006,
         materials={
-            'Polar_White': 'paint_white', 'Color_M08': 'trim_black', 'Interior': 'interior_leather',
+            'Polar_White': 'paint_blue', 'Color_M08': 'trim_black', 'Interior': 'interior_leather',
             'Color_A08': 'tail_red', 'Color_A07': 'tail_red', 'Color_M02': 'chrome', 'Color_M03': 'alloy',
             'UnderCarriage': 'undercarriage', 'ChromeBlack_Windows': 'black_chrome',
             '_2020_Mercedes_Benz_GLS450_wire_088144225': 'interior_trim', 'Tyres': 'rubber',
             'WindowsTint': 'glass', 'Lights_Glass': 'lamp_glass', 'Color_M01': 'lamp_inner',
             'Grille': 'trim_gloss_black', 'Color_M04': 'lamp_inner', 'material': 'plate',
         },
-        decimate={'paint_white': 0.6, 'trim_black': 0.55, 'interior_leather': 0.5, 'tail_red': 0.3,
+        decimate={'paint_blue': 0.6, 'trim_black': 0.55, 'interior_leather': 0.5, 'tail_red': 0.3,
                   'chrome': 0.6, 'alloy': 0.6, 'undercarriage': 0.35, 'interior_trim': 0.6, 'trim_gloss_black': 0.7,
                   'lamp_inner': 0.5, 'black_chrome': 0.8, 'rubber': 0.8},
         beltline_z=0.5,

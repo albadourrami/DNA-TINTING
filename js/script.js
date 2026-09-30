@@ -105,12 +105,12 @@
     return "Limo black — maximum privacy";
   };
 
-  const updateShadePreview = (vlt, committed = false) => {
+  const updateShadePreview = (vlt, committed = false, source = "slider") => {
     shadeValue.textContent = `${vlt}% VLT`;
     shadeDesc.textContent = shadeDescriptionFor(vlt);
     shadePresets.forEach((btn) => btn.classList.toggle("is-active", Number(btn.dataset.vlt) === vlt));
     window.dnaShade = vlt;
-    document.dispatchEvent(new CustomEvent("dna:shade", { detail: { vlt, committed } }));
+    document.dispatchEvent(new CustomEvent("dna:shade", { detail: { vlt, committed, source } }));
     if (committed && shadeLevelSelect) {
       // Keep the booking form's "Preferred Shade" in step with the studio.
       const match = Array.from(shadeLevelSelect.options).find((o) => o.text.startsWith(`${vlt}% VLT`));
@@ -121,16 +121,16 @@
   // The only VLT percentages we actually offer. The slider can be dragged
   // to any value in between for feel, but always glides to the nearest of
   // these on release, so it's clear those are the only real options.
-  const ALLOWED_SHADES = [5, 20, 35, 70];
+  const ALLOWED_SHADES = [5, 20, 35, 50, 70];
   const nearestAllowedShade = (vlt) =>
     ALLOWED_SHADES.reduce((closest, v) => (Math.abs(v - vlt) < Math.abs(closest - vlt) ? v : closest));
 
   let shadeGlideFrame = null;
-  const glideShadeTo = (target, duration = 260) => {
+  const glideShadeTo = (target, duration = 260, source = "slider") => {
     if (shadeGlideFrame) cancelAnimationFrame(shadeGlideFrame);
     const start = Number(shadeSlider.value);
     if (start === target) {
-      updateShadePreview(target, true);
+      updateShadePreview(target, true, source);
       return;
     }
     const startTime = performance.now();
@@ -139,7 +139,7 @@
       const t = Math.min(1, (now - startTime) / duration);
       const value = Math.round(start + (target - start) * easeOutCubic(t));
       shadeSlider.value = String(value);
-      updateShadePreview(value, t >= 1);
+      updateShadePreview(value, t >= 1, source);
       if (t < 1) {
         shadeGlideFrame = requestAnimationFrame(step);
       } else {
@@ -179,6 +179,9 @@
     shadePresets.forEach((btn) => {
       btn.addEventListener("click", () => glideShadeTo(Number(btn.dataset.vlt)));
     });
+
+    // The studio moves the slider when a shade is applied to every window from the car.
+    window.dnaSetShade = (vlt) => glideShadeTo(vlt, 260, "studio");
   }
 
   /* ---------------------------------------------------------------------
@@ -371,6 +374,15 @@
     pricingWindowCountField.value = booking.windowCount ? String(booking.windowCount) : "";
     pricingWindowsSelectedField.value = booking.windowsSelected || "";
     pricingWindshieldStripField.value = booking.windshieldStrip || "";
+    if (booking.shadeLevel != null && shadeLevelSelect) {
+      // One shade everywhere → that option; different shades per window → a "mixed" option.
+      let match = Array.from(shadeLevelSelect.options).find((o) => o.text.startsWith(`${booking.shadeLevel}% VLT`));
+      if (!match && booking.shadeLevel === "mixed") {
+        match = shadeLevelSelect.querySelector('option[value="mixed"]') || new Option("Mixed — per window (see windows)", "mixed");
+        if (!match.parentNode) shadeLevelSelect.add(match);
+      }
+      if (match) shadeLevelSelect.value = match.value;
+    }
     pricingEstimatedPriceField.value = booking.estimatedPrice;
     pricingSummaryCategory.textContent = booking.summaryTitle;
     pricingSummaryDetail.textContent = booking.summaryDetail;

@@ -206,6 +206,24 @@
               </div>
             </div>
 
+            <!-- Tap a window on the car: a pin marks it and this picker sets its shade. -->
+            <svg class="zone-leader" id="zoneLeader" aria-hidden="true" hidden><line id="zoneLeaderLine" x1="0" y1="0" x2="0" y2="0"/></svg>
+            <span class="zone-pin" id="zonePin" aria-hidden="true" hidden></span>
+            <div class="zone-pop" id="zonePop" role="dialog" aria-labelledby="zonePopTitle" hidden>
+              <div class="zone-pop-head">
+                <div class="zone-pop-titles">
+                  <span class="zone-pop-kicker" id="zonePopKicker">Window tint</span>
+                  <strong id="zonePopTitle">Front driver</strong>
+                </div>
+                <span class="zone-pop-value" id="zonePopValue">35%</span>
+                <button type="button" class="zone-pop-close" id="zonePopClose" aria-label="Close window picker">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                </button>
+              </div>
+              <div class="zone-pop-chips" id="zonePopChips" role="radiogroup" aria-labelledby="zonePopTitle"></div>
+              <button type="button" class="zone-pop-all" id="zonePopAll">Use this shade on every window</button>
+            </div>
+
             <p class="studio-hint" id="studioHint">Drag to rotate &middot; tap a window to select it</p>
           </div>
         </div>
@@ -218,18 +236,19 @@
           </div>
 
           <div class="studio-step">
-            <p class="studio-step-label"><span>2</span> Choose your shade</p>
+            <p class="studio-step-label"><span>2</span> Set a shade for every window</p>
             <div class="shade-controls">
               <div class="shade-readout">
                 <span class="shade-readout-value" id="shadeValue">35% VLT</span>
                 <span class="shade-readout-desc" id="shadeDesc">Most popular daily-driver shade</span>
               </div>
-              <input type="range" class="shade-slider" id="shadeSlider" min="5" max="70" step="1" value="35" aria-label="Drag to preview window tint darkness. Snaps to the shades we offer: 5%, 20%, 35%, or 70% VLT">
+              <input type="range" class="shade-slider" id="shadeSlider" min="5" max="70" step="1" value="35" aria-label="Set every selected window at once. Snaps to the shades we offer: 5%, 20%, 35%, 50% or 70% VLT">
               <div class="shade-slider-scale"><span>5% &mdash; darkest</span><span>70% &mdash; lightest</span></div>
               <div class="shade-presets" role="group" aria-label="Shades we offer">
                 <button type="button" class="shade-preset" data-vlt="5">5%</button>
                 <button type="button" class="shade-preset" data-vlt="20">20%</button>
                 <button type="button" class="shade-preset is-active" data-vlt="35">35%</button>
+                <button type="button" class="shade-preset" data-vlt="50">50%</button>
                 <button type="button" class="shade-preset" data-vlt="70">70%</button>
               </div>
               <p class="studio-legal">VLT = how much light gets through. Lower is darker. We&rsquo;ll always confirm your state&rsquo;s legal limits before install.</p>
@@ -237,10 +256,10 @@
           </div>
 
           <div class="studio-step">
-            <p class="studio-step-label" id="studioWindowsLabel"><span>3</span> Pick your windows <em class="studio-count" id="studioCount">5 of 5</em></p>
+            <p class="studio-step-label" id="studioWindowsLabel"><span>3</span> Fine-tune each window <em class="studio-count" id="studioCount">5 of 5</em></p>
             <div class="studio-packages" id="studioPackages" role="group" aria-label="Window packages"></div>
-            <div class="zone-groups" id="zoneMap" aria-labelledby="studioWindowsLabel"></div>
-            <p class="zone-hint">Tip: tap a window on the car to add or remove it.</p>
+            <div class="zone-list" id="zoneMap" aria-labelledby="studioWindowsLabel"></div>
+            <p class="zone-hint">Mix and match: tap any window on the car, or pick a shade per window here. The price doesn&rsquo;t change with the shade.</p>
           </div>
 
           <div class="studio-step studio-step--extra" id="studioStripStep">
@@ -253,19 +272,26 @@
                 <span>Top windshield strip</span>
               </span>
             </label>
+            <div class="strip-shades" id="stripShades" role="radiogroup" aria-label="Windshield strip shade" hidden></div>
             <p class="studio-disclaimer">The 3D preview is for illustration only &mdash; it isn&rsquo;t a guarantee that a tint setup is legal where you drive. Windshield and front-window limits vary by state; we&rsquo;ll confirm what&rsquo;s allowed before we install.</p>
           </div>
 
-          <div class="studio-step studio-step--price" id="tint-price">
-            <p class="studio-step-label"><span>5</span> Film &amp; price</p>
-            <label class="ceramic-toggle" id="ceramicToggleLabel">
-              <input type="checkbox" id="ceramicUpgradeToggle">
-              <span class="ceramic-toggle-switch" aria-hidden="true"></span>
-              <span class="ceramic-toggle-copy">
-                <strong>Upgrade to Ceramic</strong>
-                <span>Our best heat rejection &amp; clarity &mdash; add <span id="ceramicUpgradeAmount">$100</span> to your total</span>
-              </span>
-            </label>
+          <div class="studio-step" id="studioFilmStep">
+            <p class="studio-step-label" id="studioFilmLabel"><span>5</span> Choose your film</p>
+            <div class="film-options" role="radiogroup" aria-labelledby="studioFilmLabel">
+              <label class="film-option" data-film="Carbon">
+                <input type="radio" name="studioFilm" value="carbon" id="filmCarbon" checked>
+                <span class="film-option-top"><strong>Carbon</strong><em class="film-option-price">Included</em></span>
+                <span class="film-option-desc">Sleek matte-black film. Blocks 99% of UV and never fades purple.</span>
+              </label>
+              <label class="film-option film-option--ceramic" data-film="Ceramic">
+                <input type="radio" name="studioFilm" value="ceramic" id="ceramicUpgradeToggle">
+                <span class="film-option-top"><strong>Ceramic</strong><em class="film-option-price">+<span id="ceramicUpgradeAmount">$100</span></em></span>
+                <span class="film-option-desc">Our best heat rejection and clarity. Zero signal interference.</span>
+                <span class="film-option-flat">One flat price for the whole vehicle &mdash; not per window</span>
+              </label>
+            </div>
+            <p class="film-note">One film covers every tinted window &mdash; Carbon and Ceramic can&rsquo;t be mixed. Your shades stay exactly as you set them.</p>
             <details class="film-details">
               <summary>Carbon vs. Ceramic &mdash; what&rsquo;s the difference?</summary>
               <div class="film-compare">
@@ -291,15 +317,19 @@
                 </div>
               </div>
             </details>
+          </div>
 
-            <div class="studio-quote" id="pricingResult" role="status">
+          <div class="studio-step studio-step--price" id="tint-price">
+            <p class="studio-step-label"><span>6</span> Your configuration</p>
+            <div class="studio-quote" id="pricingResult">
+              <dl class="config-summary" id="configSummary"></dl>
               <div class="pricing-result-top">
-                <span class="pricing-result-label" id="pricingResultLabel">Sedan / Coupe &middot; Carbon &middot; all 5 windows</span>
+                <span class="pricing-result-label" id="pricingResultLabel">Total</span>
                 <span class="pricing-result-price" id="pricingResultPrice">$250</span>
               </div>
-              <p class="pricing-result-note" id="pricingResultNote"></p>
+              <p class="pricing-result-note" id="pricingResultNote" aria-live="polite"></p>
               <p class="studio-nudge" id="studioNudge" hidden></p>
-              <button type="button" class="btn btn-primary btn-lg" id="pricingContinueBtn">Book This Price</button>
+              <button type="button" class="btn btn-primary btn-lg btn-sheen" id="pricingContinueBtn">Book This Price</button>
             </div>
           </div>
         </div>
