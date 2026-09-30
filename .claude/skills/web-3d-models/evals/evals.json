@@ -1,0 +1,23 @@
+{
+  "skill_name": "web-3d-models",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Here's a car model (CarConcept.glb). Put it on my plain HTML landing page so visitors can rotate it and try 3 window tint shades. Must work on phones.",
+      "expected_output": "Inspected model, optimized GLB (<5 MB), vanilla viewer-template with parts.windows -> material 'Glass', a swatches option using glass visibleLight, touch guard on mobile, verified screenshots desktop+mobile.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "I have an FBX of a sneaker from my designer and a Next.js site. Make a 3D product viewer with color options.",
+      "expected_output": "FBX converted to GLB, unit scale checked (cm), optimized, R3F template via dynamic import ssr:false, color swatches or variants in config, poster + loading state.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "My 3D model shows up completely black and tiny on my website, what's wrong?",
+      "expected_output": "Uses troubleshooting reference: checks environment/lighting (black), units/fit (tiny), runs inspector, gives concrete fixes.",
+      "files": []
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>3D Viewer</title>
+
+  <!-- Start fetching the model and the three.js core while the HTML parses. -->
+  <link rel="preload" href="./models/model.glb" as="fetch" type="model/gltf-binary" crossorigin />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js" />
+  <link rel="stylesheet" href="./viewer/viewer.css" />
+
+  <!-- Pin one exact three.js version for core + addons; mismatched versions break loaders. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+      }
+    }
+  </script>
+
+  <style>
+    body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: #fafafa; }
+    main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { margin: 0 0 16px; font-size: clamp(22px, 4vw, 32px); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Product in 3D</h1>
+
+    <!-- The viewer mounts here. Add data-theme="dark" for the dark palette. -->
+    <section id="viewer" aria-label="3D product viewer"></section>
+  </main>
+
+  <script type="module">
+    import config from './model.config.js';
+    import { mountViewer } from './viewer/ui.js';
+
+    const { viewer } = await mountViewer(document.getElementById('viewer'), config);
+
+    // Hook site logic here, e.g. keep a pricing form in sync with the 3D choices:
+    viewer.on('change', ({ id, value }) => console.debug('[3d] option', id, '→', value));
+    window.viewer = viewer; // handy for debugging in the console; remove in production
+  </script>
+</body>
+</html>
