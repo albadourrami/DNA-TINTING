@@ -18,17 +18,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Rubik:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
-<link rel="preload" href="assets/vehicles/audi-a3/poster.webp" as="image" fetchpriority="low">
-<!-- three.js for the Tint Studio. Pinned: core, addons and decoders must be the same release.
-     Nothing here downloads until the studio scrolls near the viewport (js/tint-studio/main.js). -->
-<script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
-    }
-  }
-</script>
+<link rel="preload" href="assets/vehicles/amg-c63/poster.webp" as="image" fetchpriority="low">
+<!-- three.js for the Tint Studio is imported by full URL (jsDelivr "+esm" builds) in
+     js/tint-studio/*.js, so no import map is needed: import maps are ignored when a page is
+     embedded after other module scripts (e.g. inside a preview viewer). Nothing downloads
+     until the studio scrolls near the viewport (js/tint-studio/main.js). -->
 </head>
 <body>
 
@@ -40,7 +34,7 @@
 <header class="site-header" id="siteHeader">
   <div class="container header-inner">
     <a href="#top" class="brand" aria-label="DNA Tinting home">
-      <img src="assets/logo-light.webp" alt="DNA Tinting — It Runs In Our Blood" class="brand-logo" width="188" height="80">
+      <img src="assets/logo.png" alt="DNA Tinting — It Runs In Our Blood" class="brand-logo" width="188" height="80">
     </a>
 
     <nav class="main-nav" id="mainNav" aria-label="Primary">
@@ -175,7 +169,7 @@
       <div class="studio-layout">
         <div class="studio-stage-col">
           <div class="studio-stage" id="studioStage">
-            <img class="studio-poster" id="studioPoster" src="assets/vehicles/audi-a3/poster.webp" alt="3D preview of a car with tinted windows" width="1600" height="1000" decoding="async">
+            <img class="studio-poster" id="studioPoster" src="assets/vehicles/amg-c63/poster.webp" alt="3D preview of a car with tinted windows" width="1600" height="1000" decoding="async">
             <img class="studio-photo" id="studioPhoto" alt="" hidden>
             <div class="studio-loading" id="studioLoading" role="status" hidden>
               <div class="studio-progress" aria-hidden="true"><span id="studioProgressBar"></span></div>
@@ -200,11 +194,18 @@
                   <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v18"/><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-7z" fill="currentColor" opacity="0.35"/></svg>
                   <span>Before / After</span>
                 </button>
+                <button type="button" class="studio-tool studio-tool--icon" id="studioIntro" aria-label="Replay the fly-through" title="Replay the fly-through">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M10 9l5 3-5 3z" fill="currentColor"/></svg>
+                </button>
                 <button type="button" class="studio-tool studio-tool--icon" id="studioFullscreen" aria-label="Full screen">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
                 </button>
               </div>
             </div>
+
+            <!-- Intro fly-through: letterbox bars + skip -->
+            <div class="studio-cine" aria-hidden="true"><span></span><span></span></div>
+            <button type="button" class="studio-skip" id="studioSkip">Skip intro</button>
 
             <!-- Tap a window on the car: a pin marks it and this picker sets its shade. -->
             <svg class="zone-leader" id="zoneLeader" aria-hidden="true" hidden><line id="zoneLeaderLine" x1="0" y1="0" x2="0" y2="0"/></svg>
@@ -220,6 +221,7 @@
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
                 </button>
               </div>
+              <div class="zone-pop-modes" id="zonePopModes" role="radiogroup" aria-label="How much of the windshield" hidden></div>
               <div class="zone-pop-chips" id="zonePopChips" role="radiogroup" aria-labelledby="zonePopTitle"></div>
               <button type="button" class="zone-pop-all" id="zonePopAll">Use this shade on every window</button>
             </div>
@@ -242,13 +244,12 @@
                 <span class="shade-readout-value" id="shadeValue">35% VLT</span>
                 <span class="shade-readout-desc" id="shadeDesc">Most popular daily-driver shade</span>
               </div>
-              <input type="range" class="shade-slider" id="shadeSlider" min="5" max="70" step="1" value="35" aria-label="Set every selected window at once. Snaps to the shades we offer: 5%, 20%, 35%, 50% or 70% VLT">
+              <input type="range" class="shade-slider" id="shadeSlider" min="5" max="70" step="1" value="35" aria-label="Set every selected window at once. Snaps to the shades we offer: 5%, 20%, 35% or 70% VLT">
               <div class="shade-slider-scale"><span>5% &mdash; darkest</span><span>70% &mdash; lightest</span></div>
               <div class="shade-presets" role="group" aria-label="Shades we offer">
                 <button type="button" class="shade-preset" data-vlt="5">5%</button>
                 <button type="button" class="shade-preset" data-vlt="20">20%</button>
                 <button type="button" class="shade-preset is-active" data-vlt="35">35%</button>
-                <button type="button" class="shade-preset" data-vlt="50">50%</button>
                 <button type="button" class="shade-preset" data-vlt="70">70%</button>
               </div>
               <p class="studio-legal">VLT = how much light gets through. Lower is darker. We&rsquo;ll always confirm your state&rsquo;s legal limits before install.</p>
@@ -257,23 +258,27 @@
 
           <div class="studio-step">
             <p class="studio-step-label" id="studioWindowsLabel"><span>3</span> Fine-tune each window <em class="studio-count" id="studioCount">5 of 5</em></p>
+            <div class="suv-windows" id="suvWindows" hidden>
+              <p class="suv-windows-q" id="suvWindowsLabel">How many side windows does your SUV have behind the front doors?</p>
+              <div class="suv-windows-opts" role="radiogroup" aria-labelledby="suvWindowsLabel">
+                <button type="button" role="radio" class="suv-opt" data-extra="0" aria-checked="true"><strong>2</strong><span>Rear doors only</span></button>
+                <button type="button" role="radio" class="suv-opt" data-extra="1" aria-checked="false"><strong>4</strong><span>Rear doors + back quarter windows <em id="suvExtraPrice">+$50 each</em></span></button>
+              </div>
+            </div>
             <div class="studio-packages" id="studioPackages" role="group" aria-label="Window packages"></div>
             <div class="zone-list" id="zoneMap" aria-labelledby="studioWindowsLabel"></div>
             <p class="zone-hint">Mix and match: tap any window on the car, or pick a shade per window here. The price doesn&rsquo;t change with the shade.</p>
           </div>
 
           <div class="studio-step studio-step--extra" id="studioStripStep">
-            <p class="studio-step-label"><span>4</span> Add-on service</p>
-            <label class="ceramic-toggle extra-toggle" id="stripToggleLabel">
-              <input type="checkbox" id="windshieldStripToggle">
-              <span class="ceramic-toggle-switch" aria-hidden="true"></span>
-              <span class="ceramic-toggle-copy">
-                <strong>Windshield strip <em class="extra-price" id="stripPrice">+$25</em></strong>
-                <span>Top windshield strip</span>
-              </span>
-            </label>
-            <div class="strip-shades" id="stripShades" role="radiogroup" aria-label="Windshield strip shade" hidden></div>
-            <p class="studio-disclaimer">The 3D preview is for illustration only &mdash; it isn&rsquo;t a guarantee that a tint setup is legal where you drive. Windshield and front-window limits vary by state; we&rsquo;ll confirm what&rsquo;s allowed before we install.</p>
+            <p class="studio-step-label" id="wsLabel"><span>4</span> Windshield <em class="studio-count">Optional</em></p>
+            <div class="ws-modes" id="wsModes" role="radiogroup" aria-labelledby="wsLabel">
+              <button type="button" role="radio" class="ws-mode" data-mode="none" aria-checked="true"><span class="ws-mode-art ws-mode-art--none" aria-hidden="true"></span><strong>No tint</strong><small>Factory glass</small></button>
+              <button type="button" role="radio" class="ws-mode" data-mode="strip" aria-checked="false"><span class="ws-mode-art ws-mode-art--strip" aria-hidden="true"></span><strong>Top strip</strong><small id="wsStripPrice">+$25</small></button>
+              <button type="button" role="radio" class="ws-mode" data-mode="full" aria-checked="false"><span class="ws-mode-art ws-mode-art--full" aria-hidden="true"></span><strong>Full windshield</strong><small id="wsFullPrice">+$75</small></button>
+            </div>
+            <div class="strip-shades" id="stripShades" role="radiogroup" aria-label="Windshield shade" hidden></div>
+            <p class="studio-disclaimer">The 3D preview is for illustration only &mdash; it isn&rsquo;t a guarantee that a tint setup is legal where you drive. Most states allow only a top strip on the windshield, and a full windshield is usually limited to very light film. Windshield and front-window limits vary by state; we&rsquo;ll confirm what&rsquo;s allowed before we install.</p>
           </div>
 
           <div class="studio-step" id="studioFilmStep">
@@ -699,7 +704,7 @@
           <input type="hidden" id="pricingFilmTypeField" name="filmType" value="">
           <input type="hidden" id="pricingWindowCountField" name="windowCount" value="">
           <input type="hidden" id="pricingWindowsSelectedField" name="windowsSelected" value="">
-          <input type="hidden" id="pricingWindshieldStripField" name="windshieldStrip" value="">
+          <input type="hidden" id="pricingWindshieldField" name="windshield" value="">
           <input type="hidden" id="pricingEstimatedPriceField" name="estimatedPrice" value="">
           <div class="form-grid form-grid-2">
             <div class="field">
@@ -707,7 +712,6 @@
               <select id="shadeLevel" name="shadeLevel">
                 <option value="Not sure / need advice">Not sure &mdash; need advice</option>
                 <option>70% VLT &mdash; Light</option>
-                <option>50% VLT &mdash; Light</option>
                 <option selected>35% VLT &mdash; Most Popular</option>
                 <option>20% VLT &mdash; Dark</option>
                 <option>5% VLT &mdash; Limo Black</option>
@@ -840,7 +844,7 @@
   <div class="container footer-grid">
     <div class="footer-brand">
       <div class="footer-logo-badge">
-        <img src="assets/logo-light.webp" alt="DNA Tinting — It Runs In Our Blood" width="170" height="72">
+        <img src="assets/logo.png" alt="DNA Tinting — It Runs In Our Blood" width="170" height="72">
       </div>
       <p>Premium automotive, residential, and commercial window tinting &mdash; installed with precision, backed for life.</p>
       <div class="footer-social" aria-label="Social media links">

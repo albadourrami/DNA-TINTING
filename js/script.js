@@ -103,8 +103,7 @@
   const shadeLevelSelect = document.getElementById("shadeLevel");
 
   const shadeDescriptionFor = (vlt) => {
-    if (vlt >= 60) return "Light — near factory glass";
-    if (vlt >= 42) return "Light tint, subtle heat cut";
+    if (vlt >= 53) return "Light — near factory glass";
     if (vlt >= 27) return "Most popular daily-driver shade";
     if (vlt >= 12) return "Dark, high privacy";
     return "Limo black — maximum privacy";
@@ -126,7 +125,7 @@
   // The only VLT percentages we actually offer. The slider can be dragged
   // to any value in between for feel, but always glides to the nearest of
   // these on release, so it's clear those are the only real options.
-  const ALLOWED_SHADES = [5, 20, 35, 50, 70];
+  const ALLOWED_SHADES = [5, 20, 35, 70];
   const nearestAllowedShade = (vlt) =>
     ALLOWED_SHADES.reduce((closest, v) => (Math.abs(v - vlt) < Math.abs(closest - vlt) ? v : closest));
 
@@ -392,7 +391,7 @@
   const pricingFilmTypeField = document.getElementById("pricingFilmTypeField");
   const pricingWindowCountField = document.getElementById("pricingWindowCountField");
   const pricingWindowsSelectedField = document.getElementById("pricingWindowsSelectedField");
-  const pricingWindshieldStripField = document.getElementById("pricingWindshieldStripField");
+  const pricingWindshieldField = document.getElementById("pricingWindshieldField");
   const pricingEstimatedPriceField = document.getElementById("pricingEstimatedPriceField");
   const studioSection = document.getElementById("tint-studio");
 
@@ -401,7 +400,7 @@
     pricingFilmTypeField.value = booking.filmType || "";
     pricingWindowCountField.value = booking.windowCount ? String(booking.windowCount) : "";
     pricingWindowsSelectedField.value = booking.windowsSelected || "";
-    pricingWindshieldStripField.value = booking.windshieldStrip || "";
+    pricingWindshieldField.value = booking.windshield || "";
     if (booking.shadeLevel != null && shadeLevelSelect) {
       // One shade everywhere → that option; different shades per window → a "mixed" option.
       let match = Array.from(shadeLevelSelect.options).find((o) => o.text.startsWith(`${booking.shadeLevel}% VLT`));

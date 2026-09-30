@@ -38,6 +38,10 @@ ROLES = {
     'indicator':         dict(color=(1, 0.55, 0.1), rough=0.2, emit=(1, 0.45, 0.05), emit_strength=1.2),
     'plate':             dict(color=(1, 1, 1), rough=0.45, texture='gen:plate.png'),
     'glass':             dict(color=(0.86, 0.92, 0.9), rough=0.02, transmission=1.0),  # replaced at runtime by the tint shader
+    'caliper_red':       dict(color=(0.72, 0.04, 0.05), rough=0.28, coat=0.8, coat_rough=0.05),
+    'brake_disc':        dict(color=(0.42, 0.42, 0.44), metal=1.0, rough=0.38),
+    'exhaust_tip':       dict(color=(0.9, 0.9, 0.92), metal=1.0, rough=0.1),
+    'exhaust_inner':     dict(color=(0.01, 0.01, 0.01), rough=0.9),
 }
 
 RECIPES = {
@@ -67,6 +71,30 @@ RECIPES = {
         interior=dict(seat='interior_leather', dark='interior_dark', trim='interior_trim', headliner='headliner'),
         plates=[dict(role='plate')],
     ),
+    # ---------------- Mercedes-AMG C63 sedan (sedan slot) ----------------
+    'c63': dict(
+        length_m=4.757,
+        subsurf_levels=2,
+        drop=['body.001', 'Plane', 'Plane.001', 'Plane.002'],   # stray half-body copy, blueprint planes, old plate
+        split_materials={'body.003': ['Alloy']},                # body trim shares the rim material
+        materials={
+            'bodypaint': 'paint_blue', 'Window': 'glass', 'Glass(headlights)': 'lamp_glass',
+            'Headlight(Emission)': 'drl', 'Brake lights': 'tail_red', 'Tires': 'rubber', 'Alloy': 'alloy_amg',
+            'body.003/Alloy': 'black_chrome', 'Trim': 'trim_gloss_black',
+        },
+        roles={
+            # AMG multi-spoke rims: bright machined face
+            'alloy_amg': dict(color=(0.8, 0.81, 0.84), metal=1.0, rough=0.16),
+        },
+        decimate={'paint_blue': 0.5, 'trim_gloss_black': 0.6, 'rubber': 0.5, 'alloy_amg': 0.7, 'drl': 0.35},
+        beltline_z=0.5,
+        smooth_angle=50,
+        smooth_roles=['tail_red', 'lamp_glass'],   # coarse lamp cages: smooth, no creases
+        interior=dict(seat='interior_leather', dark='interior_dark', trim='interior_trim', headliner='headliner'),
+        # generated, because the source has none: plates, quad exhaust, diffuser, brakes
+        details=dict(plates=True, exhaust='quad', diffuser=True, brakes='caliper_red'),
+        plates=[dict(role='plate')],
+    ),
     # ---------------- Mercedes-Benz GLS 580 (SUV slot) ----------------
     'gls': dict(
         length_m=5.21,
@@ -85,6 +113,7 @@ RECIPES = {
                   'lamp_inner': 0.5, 'black_chrome': 0.8, 'rubber': 0.8},
         beltline_z=0.5,
         roof_glass=True,   # panoramic roof: stays factory glass
+        quarter_glass=True,  # third-row windows are their own zones (optional extra windows)
         smooth_angle=35,
         plates=[dict(role='plate')],
     ),
@@ -231,12 +260,170 @@ def build_interior(bpy, bmesh, Vector, Matrix, roles, spec, log):
 
 
 # ---------------------------------------------------------------------------
+# Generated details for bare models: US license plates, exhaust tips, rear diffuser,
+# brake discs + calipers. Everything is placed by ray casting against the body, so it
+# sits on the real surfaces of any car.
+# ---------------------------------------------------------------------------
+def build_details(bpy, bmesh, Vector, Matrix, roles, spec, paint_role, log):
+    from mathutils.bvhtree import BVHTree
+    body = bpy.data.objects.get(paint_role)
+    if not body:
+        log('details: no body object', paint_role); return
+    dg = bpy.context.evaluated_depsgraph_get()
+    bvh = BVHTree.FromObject(body, dg)
+    ys = [v.co.y for v in body.data.vertices]; zs = [v.co.z for v in body.data.vertices]
+    ymin, ymax, H = min(ys), max(ys), max(zs)
+    made = []
+
+    def link(name, bm, role):
+        me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+        ob = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(ob)
+        me.materials.append(roles[role])
+        made.append(ob)
+        return ob
+
+    def hit(x, z, rear):
+        """Where the body surface is at (x, z), seen from behind (rear) or from the front.
+        Only an outward-facing surface on that end of the car counts: under a short bumper the
+        ray would otherwise fly through and hit the inside of the other bumper."""
+        o = Vector((x, ymax + 2 if rear else ymin - 2, z))
+        d = Vector((0, -1 if rear else 1, 0))
+        loc, nrm, _, _ = bvh.ray_cast(o, d)
+        if loc is None or (loc.y > 0) != rear or not (nrm.y > 0.3 if rear else nrm.y < -0.3):
+            return None, None
+        return loc, nrm
+
+    # where the rear bumper ends (lowest point with an outward rear surface) and its face there
+    bumper_z, bumper_y = None, None
+    for i in range(10, 60):
+        loc, nrm = hit(0, H * i / 100, True)
+        if loc:
+            bumper_z, bumper_y = loc.z, loc.y; break
+
+    def quad(name, role, center, w, h, normal):
+        bm = bmesh.new()
+        n = normal.normalized(); up = Vector((0, 0, 1)); right = up.cross(n).normalized(); up = n.cross(right)
+        vs = [bm.verts.new(center + right * (sx * w / 2) + up * (sy * h / 2)) for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+        bm.faces.new(vs)
+        # a thin backing box so the plate reads as an object, not a decal
+        back = [bm.verts.new(v.co - n * 0.012) for v in vs]
+        for i in range(4):
+            bm.faces.new((vs[i], vs[(i + 1) % 4], back[(i + 1) % 4], back[i]))
+        return link(name, bm, role)
+
+    # --- US license plates (12 x 6 in), front and rear ---
+    if spec.get('plates'):
+        for rear in (False, True):
+            best = None
+            for z in [H * f for f in (0.36, 0.4, 0.32, 0.28)]:
+                loc, nrm = hit(0, z, rear)
+                if loc and abs(nrm.y) > 0.75:
+                    best = (loc, nrm); break
+            if not best:
+                log('details: no flat spot for', 'rear' if rear else 'front', 'plate'); continue
+            loc, nrm = best
+            n = Vector((0, 1 if rear else -1, 0))
+            quad('plate', 'plate', loc + n * 0.016, 0.305, 0.152, n)
+        plates = [o for o in made if o.name.startswith('plate')]
+        made[:] = [o for o in made if o not in plates]
+        if plates:
+            for x in bpy.data.objects: x.select_set(x in plates)
+            bpy.context.view_layer.objects.active = plates[0]
+            if len(plates) > 1: bpy.ops.object.join()
+            bpy.context.view_layer.objects.active.name = 'plate'
+
+    # --- rear diffuser: a lower valance under the bumper with vertical fins ---
+    low = H * 0.15                                   # bottom of the valance (ground clearance)
+    if spec.get('diffuser') and bumper_z:
+        top = bumper_z + 0.03                        # tucks just inside the bumper's lower edge
+        face = bumper_y - 0.07                       # recessed under the bumper, not bolted on
+        bm = bmesh.new()
+        w, d = 1.16, 0.34
+        r = bmesh.ops.create_cube(bm, size=1.0)
+        for v in r['verts']:
+            # taper toward the bottom, like a real diffuser
+            t = v.co.z + 0.5
+            v.co = Vector((v.co.x * w * (0.9 + 0.1 * t), face - d / 2 + v.co.y * d, low + t * (top - low)))
+        bmesh.ops.bevel(bm, geom=list(bm.edges), offset=0.02, segments=3, affect='EDGES', profile=0.5)
+        for fx in (-0.2, -0.066, 0.066, 0.2):
+            r = bmesh.ops.create_cube(bm, size=1.0)
+            for v in r['verts']: v.co = Vector((fx + v.co.x * 0.01, face + 0.02 + v.co.y * 0.1, low + 0.01 + (v.co.z + 0.5) * (top - low) * 0.62))
+        link('Diffuser', bm, 'trim_gloss_black')
+
+    # --- quad exhaust tips, set into the valance ---
+    if spec.get('exhaust') and bumper_z:
+        z = low + (bumper_z - low) * 0.5
+        face = bumper_y - 0.07
+        xs = (-0.46, -0.35, 0.35, 0.46) if spec['exhaust'] == 'quad' else (-0.42, 0.42)
+        for x in xs:
+            # an open chrome tube with a dark baffle set back inside it
+            for role, r, ln, y_end, caps in (('exhaust_tip', 0.045, 0.18, 0.03, False), ('exhaust_inner', 0.04, 0.02, -0.02, True)):
+                bm = bmesh.new()
+                bmesh.ops.create_cone(bm, cap_ends=caps, segments=32, radius1=r, radius2=r * 1.05, depth=ln)
+                bmesh.ops.rotate(bm, verts=bm.verts, cent=Vector(), matrix=Matrix.Rotation(math.radians(90), 3, 'X'))
+                bmesh.ops.translate(bm, verts=bm.verts, vec=Vector((x, face + y_end - ln / 2, z)))
+                link('Exhaust', bm, role)
+
+    # --- brakes: a disc and a caliper behind every rim ---
+    tires = bpy.data.objects.get(spec.get('tire_role', 'rubber'))
+    if spec.get('brakes') and tires:
+        pts = [tires.matrix_world @ v.co for v in tires.data.vertices]
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                q = [p for p in pts if p.x * sx > 0 and p.y * sy > 0]
+                if not q: continue
+                cy = (min(p.y for p in q) + max(p.y for p in q)) / 2
+                cz = (min(p.z for p in q) + max(p.z for p in q)) / 2
+                R = (max(p.z for p in q) - min(p.z for p in q)) / 2
+                outer = max(abs(p.x) for p in q)
+                # disc
+                bm = bmesh.new()
+                bmesh.ops.create_cone(bm, cap_ends=True, segments=40, radius1=R * 0.58, radius2=R * 0.58, depth=0.028)
+                bmesh.ops.rotate(bm, verts=bm.verts, cent=Vector(), matrix=Matrix.Rotation(math.radians(90), 3, 'Y'))
+                bmesh.ops.translate(bm, verts=bm.verts, vec=Vector((sx * (outer - 0.105), cy, cz)))
+                link('BrakeDisc', bm, 'brake_disc')
+                # caliper: a curved block hugging the top-rear of the disc
+                bm = bmesh.new()
+                seg, a0, a1 = 8, math.radians(30), math.radians(95)
+                ring = []
+                for i in range(seg + 1):
+                    a = a0 + (a1 - a0) * i / seg
+                    row = []
+                    for rr in (R * 0.36, R * 0.64):
+                        for xx in (-0.03, 0.03):
+                            # behind the axle (toward the car's rear, +Y) and up
+                            row.append(bm.verts.new((sx * (outer - 0.075) + xx, cy + math.cos(a) * rr, cz + math.sin(a) * rr)))
+                    ring.append(row)
+                for i in range(seg):
+                    A, B = ring[i], ring[i + 1]
+                    bm.faces.new((A[0], A[1], B[1], B[0])); bm.faces.new((A[2], B[2], B[3], A[3]))
+                    bm.faces.new((A[0], B[0], B[2], A[2])); bm.faces.new((A[1], A[3], B[3], B[1]))
+                bm.faces.new(ring[0][:2] + ring[0][2:][::-1]); bm.faces.new((ring[-1][0], ring[-1][2], ring[-1][3], ring[-1][1]))
+                bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+                link('Caliper', bm, spec['brakes'])
+
+    # one object per material
+    by = {}
+    for o in made:
+        by.setdefault(o.data.materials[0].name, []).append(o)
+    for mat, objs in by.items():
+        for x in bpy.data.objects: x.select_set(x in objs)
+        bpy.context.view_layer.objects.active = objs[0]
+        if len(objs) > 1: bpy.ops.object.join()
+        o = bpy.context.view_layer.objects.active
+        o.name = f'Detail_{mat}'
+        for p in o.data.polygons: p.use_smooth = True
+    log('details: built', len(made), 'parts')
+
+
+# ---------------------------------------------------------------------------
 # Check render: zones in solid colors, interior visible through glass
 # ---------------------------------------------------------------------------
 ZONE_COLORS = {
     'Glass_Windshield': (1, 0.2, 0.15), 'Glass_FrontDriver': (0.2, 0.8, 0.3), 'Glass_FrontPassenger': (0.1, 0.45, 1),
     'Glass_RearDriver': (1, 0.85, 0.1), 'Glass_RearPassenger': (0.75, 0.35, 0.95), 'Glass_RearWindow': (1, 0.55, 0.1),
     'Glass_Roof': (0.1, 0.9, 0.9), 'Glass_Lamp': (1, 1, 1), 'Glass_Other': (1, 0, 1),
+    'Glass_QuarterDriver': (0, 0.2, 0.25), 'Glass_QuarterPassenger': (0.35, 0.05, 0.1),
 }
 
 def check_render(bpy, Vector, path):

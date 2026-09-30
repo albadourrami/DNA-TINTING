@@ -8,10 +8,11 @@ means adding files, not changing code.
 
 | Id | Slot | Source | Notes |
 |---|---|---|---|
-| `audi-a3` | Sedan / Coupe pricing | Purchased model (commercial license, owner-supplied) | 3-door Sportback. The source has no interior, so the build generates a cabin. Its "rear windows" are the rear quarter glass. The source mesh has some panel waviness. |
-| `mercedes-gls` | SUV / Truck pricing | Purchased model (commercial license, owner-supplied) | Full interior. The panoramic roof stays factory glass. Rear windows = rear door + third-row glass. |
+| `amg-c63` | Sedan / Coupe pricing | Owner-supplied model (confirm its license allows commercial website use) | Four-door sedan. The source has no interior, plates, exhaust or brakes, so the build generates a cabin, US plates, a rear diffuser with quad exhaust tips, and brake discs with red calipers (`details` in the recipe). |
+| `mercedes-gls` | SUV / Truck pricing | Purchased model (commercial license, owner-supplied) | Full interior. The panoramic roof stays factory glass. Rear windows = rear door glass; the third-row glass is a separate pair of optional "extra" windows (`quarterDriver` / `quarterPassenger`). |
 
 Hidden but kept working (`enabled: false`; preview with `?studio-vehicle=<id>`):
+- `audi-a3`: the earlier sedan, replaced by the AMG C63.
 - `concept-demo`: the CC BY 4.0 stand-in coupe.
 - `c-class`, `gle`: photo-only placeholders, waiting on licensed models.
 
@@ -37,6 +38,9 @@ own storage. Only the web-optimized GLBs live here.
 
    The build names the glass meshes:
    - Windows: `Glass_Windshield`, `Glass_FrontDriver`, `Glass_FrontPassenger`, `Glass_RearDriver`, `Glass_RearPassenger`, `Glass_RearWindow`
+   - SUV extras (recipe `quarter_glass=True`): `Glass_QuarterDriver`, `Glass_QuarterPassenger` — glass behind the rear doors.
+     Map them as `quarterDriver` / `quarterPassenger` in the config and the studio asks the customer whether their
+     SUV has them (each is an extra window, `EXTRA_WINDOW_PRICE` in pricing.js).
    - Not tintable: `Glass_Roof`, `Glass_Lamp`, `Glass_Other`
 
 3. **Config.** Copy `js/tint-studio/vehicles/mercedes-gls.js` to `<id>.js`, set its fields
@@ -45,15 +49,21 @@ own storage. Only the web-optimized GLBs live here.
    For a model that didn't go through the build, use `glass: 'auto'` and open the site with
    `?studio-debug`. Each window then gets its own color and the console lists every glass piece.
 
-4. **Poster + thumbnail.** On the studio, run `copy(tintStudio.viewer.screenshot())` in the
-   browser console. Save it as `poster.webp` (about 1600×1000) and a 360×270 crop as `thumb.webp`.
+4. **Poster + thumbnail.** On the studio, run `tintStudio.viewer.skipIntro()` and then
+   `copy(tintStudio.viewer.screenshot())` in the browser console. Save it as `poster.webp`
+   (about 1600×1000) and a 360×270 crop as `thumb.webp`.
 
-## Windshield strip
+When a car is selected the viewer plays a short fly-through (from the driver's seat, out through
+the rear glass, round to the start view). The path is built from the car's own glass, so new
+vehicles get it automatically; customers can skip or replay it.
 
-`windshield: { meshes: ['Glass_Windshield'], strip: { depth: 0.127 } }`
+## Windshield: top strip or full
 
-The strip is the top band of the windshield, `depth` meters down from the top edge, measured
-along the glass (0.127 m = 5 in). The viewer cuts it with a clipping plane, so no separate mesh
-is needed. Remove `strip` to turn the add-on off for a vehicle. The price is
-`WINDSHIELD_STRIP_PRICE` in `js/tint-studio/pricing.js`, or `pricing: { windshieldStrip: 30 }`
-per vehicle. The full windshield is never offered as a tintable window.
+`windshield: { meshes: ['Glass_Windshield'], strip: { depth: 0.127 }, full: true }`
+
+Customers tap the windshield (or use step 4) and pick the top strip or the full windshield, plus
+a shade. The strip is the top band, `depth` meters down from the top edge, measured along the
+glass (0.127 m = 5 in); the viewer cuts it with a clipping plane, so no separate mesh is needed.
+Remove `strip` or `full` to stop offering that option for a vehicle. Prices:
+`WINDSHIELD_STRIP_PRICE` ($25) and `WINDSHIELD_FULL_PRICE` ($75) in `js/tint-studio/pricing.js`,
+or per vehicle with `pricing: { windshieldStrip: 30, windshieldFull: 80 }`.

@@ -11,8 +11,10 @@ Recipes live in tools/vehicles/recipes.py. What the build does:
   4. splits the glass into one mesh per window, named for the configurator:
        Glass_Windshield, Glass_FrontDriver, Glass_FrontPassenger, Glass_RearDriver,
        Glass_RearPassenger, Glass_RearWindow, Glass_Roof, Glass_Lamp, Glass_Other
+       (+ Glass_QuarterDriver / Glass_QuarterPassenger with the recipe's quarter_glass flag)
      (driver side = US left = +X; the car faces -Y in Blender = +Z in glTF)
-  5. optional per-role decimation, generated interior, license plates
+  5. optional per-role decimation, generated interior, details (plates, exhaust, diffuser,
+     brakes) for bare models, license plates
   6. exports GLB (+Y up)
 """
 import sys, os, math, importlib.util
@@ -197,7 +199,7 @@ for o in [p for p in bpy.data.objects if p.type == 'MESH']:
         f.use_volume_preserve = True
         f.use_normalized = True
         bpy.ops.object.modifier_apply(modifier='fair')
-    if role.startswith('glass'):
+    if role.startswith('glass') or role in R.get('smooth_roles', []):
         bpy.ops.object.shade_smooth()
     else:
         bpy.ops.object.shade_auto_smooth(angle=math.radians(R.get('smooth_angle', 35)))
@@ -245,10 +247,18 @@ if glass_obj:
         if not lst: continue
         lst.sort(key=lambda i: i['c'].y)               # front (-Y) first
         first = lst[0]
+        rear = []
         for i in lst:
             # everything overlapping the front-most window's span is the front door glass
             front = i['c'].y <= first['yr'][1] + 0.02
             zone[i['obj']] = ('Front' if front else 'Rear') + side
+            if not front: rear.append(i)
+        # SUVs: glass behind the rear doors (third row / cargo) becomes its own quarter window
+        if R.get('quarter_glass') and rear:
+            door = rear[0]
+            for i in rear:
+                if i['c'].y > door['yr'][1] + 0.02:
+                    zone[i['obj']] = 'Quarter' + side
     # join pieces per zone and name them
     by = {}
     for o, zname in zone.items(): by.setdefault(zname, []).append(o)
@@ -263,9 +273,12 @@ if glass_obj:
         zone_report.append((o.name, len(objs), sum(len(p.vertices) - 2 for p in o.data.polygons)))
     log('glass zones:', zone_report)
 
-# ---------- 5. generated interior / plates ----------
+# ---------- 5. generated interior / details / plates ----------
 if R.get('interior'):
     recipes.build_interior(bpy, bmesh, Vector, Matrix, roles, R['interior'], log)
+if R.get('details'):
+    paint_role = next((v for v in R['materials'].values() if v.startswith('paint')), 'paint')
+    recipes.build_details(bpy, bmesh, Vector, Matrix, roles, R['details'], paint_role, log)
 for spec_ in R.get('plates', []):
     recipes.build_plate(bpy, bmesh, Vector, roles, spec_, log)
 

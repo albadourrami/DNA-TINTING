@@ -11,7 +11,7 @@
 //
 // All changes are eased per frame (update(dt)), so tint and selection changes fade
 // smoothly instead of snapping.
-import * as THREE from 'three';
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.186.1/+esm';
 
 // Factory (untinted) automotive glass: ~80% VLT with the usual faint green cast.
 const FACTORY = { vlt: 0.8, color: new THREE.Color('#d9ebe3') };

@@ -1,8 +1,9 @@
-// Audi A3 (3-door Sportback) — sedan/coupe slot.
+// Audi A3 (3-door Sportback). Retired from the studio: replaced by the AMG C63 (amg-c63.js).
 // Built from the purchased model by tools/vehicles/build_vehicle.py (recipe 'a3'): real scale,
 // PBR materials, generated cabin, per-window glass meshes, DNA Tinting plates.
 export default {
   id: 'audi-a3',
+  enabled: false,
   make: 'Audi',
   model: 'A3',
   bodyType: 'sedan',                                   // which price table (pricing.js)

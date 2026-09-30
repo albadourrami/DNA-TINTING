@@ -1,13 +1,13 @@
 // Tint Studio 3D engine. Knows nothing about prices or page layout — it loads a vehicle
 // (see vehicles/*.js), finds its windows, and tints them. Loaded lazily by main.js so the
 // page never waits on three.js.
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
-import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { Reflector } from 'three/addons/objects/Reflector.js';
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.186.1/+esm';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/loaders/GLTFLoader.js/+esm';
+import { DRACOLoader } from 'https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/loaders/DRACOLoader.js/+esm';
+import { KTX2Loader } from 'https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/loaders/KTX2Loader.js/+esm';
+import { MeshoptDecoder } from 'https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/libs/meshopt_decoder.module.js/+esm';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/controls/OrbitControls.js/+esm';
+import { Reflector } from 'https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/objects/Reflector.js/+esm';
 import { buildGlassZones } from './glass-zones.js';
 import { GlassZone, factoryGlassMaterial } from './glass.js';
 
@@ -24,6 +24,7 @@ export const VIEWS = {
   top: { azimuth: 35, elevation: 62 },
 };
 
+const windshieldSelectable = (v) => !!(v?.windshield?.strip || v?.windshield?.full);
 const coarsePointer = () => matchMedia('(pointer: coarse)').matches;
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -321,9 +322,18 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     return true;
   }
 
+  function cancelEntrance() {
+    if (!entrance) return;
+    entrance = null;
+    scene.environmentIntensity = baseEnvIntensity;
+    key.intensity = baseKey;
+    cabinLight.intensity = cabinLight.userData.base;
+    controls.target.copy(target);
+    emit('entrance-done');
+  }
   controls.addEventListener('start', () => {
     tween = null;
-    entrance = null;
+    cancelEntrance();
     userInteracted = true;
     controls.autoRotate = false;
     lastInteraction = performance.now();
@@ -337,7 +347,7 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     for (const [id, z] of zones) {
       const vlt = tints.get(id);
       z.set({ amount: !compare && vlt !== undefined ? 1 : 0, vlt: vlt ?? z.target.vlt });
-      z.focus = id === focusId;
+      z.focus = pickIdOf(id) === focusId;
     }
     invalidate();
   }
@@ -355,8 +365,13 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     // of the windshield share one surface; only the visible part may answer a click).
     const hit = raycaster.intersectObject(model, true)
       .find((h) => isShown(h.object) && (!h.object.userData.clip || h.object.userData.clip.distanceToPoint(h.point) >= 0));
-    return hit?.object.userData.zoneId || null;
+    const id = hit?.object.userData.zoneId || null;
+    return id && pickIdOf(id);
   }
+  // The windshield is one selectable window, drawn as two zones (top strip + the rest).
+  const pickIdOf = (id) => (id === 'windshieldStrip' ? 'windshield' : id);
+  const partsOf = (pickId) => (pickId === 'windshield' ? ['windshield', 'windshieldStrip'] : [pickId]);
+  function setHover(pickId, on) { for (const id of partsOf(pickId)) { const z = zones.get(id); if (z) z.hover = on; } }
   let down = null;
   // A tap/click is a short press that barely moves. Event timestamps (not "now") so a slow
   // frame between down and up can't turn a click into a long press.
@@ -383,9 +398,9 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
       hoverPending = false;
       const id = zoneAt(e.clientX, e.clientY);
       if (id === hoverId) return;
-      if (hoverId) zones.get(hoverId).hover = false;
+      if (hoverId) setHover(hoverId, false);
       hoverId = id;
-      if (id) zones.get(id).hover = true;
+      if (id) setHover(id, true);
       renderer.domElement.style.cursor = id ? 'pointer' : '';
       emit('zonehover', { zoneId: id });
       invalidate();
@@ -400,7 +415,7 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
   });
   renderer.domElement.addEventListener('pointerleave', () => {
     parallax.tx = parallax.ty = 0;
-    if (hoverId) { zones.get(hoverId).hover = false; hoverId = null; renderer.domElement.style.cursor = ''; emit('zonehover', { zoneId: null }); invalidate(); }
+    if (hoverId) { setHover(hoverId, false); hoverId = null; renderer.domElement.style.cursor = ''; emit('zonehover', { zoneId: null }); invalidate(); }
   });
 
   // ---------- Render loop (only renders when something changed) ----------
@@ -467,9 +482,78 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     key.intensity = 0;
     invalidate();
   }
+  // Cinematic intro ("drone shot"): start in the cabin looking out through the windshield,
+  // glide back between the seats, out through the rear glass, then rise and swing around
+  // to the hero view. The path is built from the car's own glass, so it fits any vehicle.
+  function playIntro(ms = 6200) {
+    const ws = zones.get('windshield'), rw = zones.get('rearWindow'), fd = zones.get('frontDriver');
+    if (reducedMotion() || !model || !ws || !rw || !fd) { playEntrance(); return; }
+    const box = (z) => z.meshes.reduce((b, m) => b.expandByObject(m), new THREE.Box3());
+    const W = box(ws), R = box(rw), F = box(fd);
+    const belt = F.min.y, roof = Math.max(F.max.y, W.max.y, R.max.y);
+    const eye = belt + 0.5 * (roof - belt);            // seated eye height
+    const front = W.getCenter(new THREE.Vector3()).z;
+    const back = R.getCenter(new THREE.Vector3()).z;
+    const len = front - back;                          // signed: models may face +Z or -Z
+    const dir = Math.sign(len) || 1;
+    const x = Math.min(0.2, F.min.x * 0.35);           // between the seats, off the center headrest
+    const hero = positionFor(currentHeroView());
+    const side = hero.clone().sub(target).setY(0).normalize();
+    const dist = hero.distanceTo(target);
+    const orbit = (deg, r, y) => {                     // a point on a circle around the car, from the hero side
+      const a = Math.atan2(side.x, side.z) + deg * DEG;
+      return new THREE.Vector3(target.x + Math.sin(a) * r, y, target.z + Math.cos(a) * r);
+    };
+    const pts = [
+      new THREE.Vector3(x, eye, front - 0.5 * len),                           // driver's eye point
+      new THREE.Vector3(x, eye + 0.02, front - 0.82 * len),                   // gliding back past the rear seats
+      new THREE.Vector3(x * 0.5, roof * 1.02, back - 0.3 * len),              // out through the rear glass
+      new THREE.Vector3(side.x * 0.35 * Math.abs(len), roof * 1.45, back - 1.05 * len), // rising behind the car
+      orbit(-70, dist * 1.05, hero.y * 1.35),                                 // sweeping round the side
+      hero,
+    ];
+    const look = [
+      new THREE.Vector3(x, eye - 0.12, front + 3 * dir),       // out through the windshield
+      new THREE.Vector3(x, eye - 0.12, front + 2 * dir),
+      new THREE.Vector3(0, eye - 0.1, front),
+      target.clone().add(new THREE.Vector3(0, 0.15, 0)),
+      target.clone(),
+      target.clone(),
+    ];
+    entrance = {
+      path: new THREE.CatmullRomCurve3(pts, false, 'centripetal'),
+      look: new THREE.CatmullRomCurve3(look, false, 'centripetal'),
+      t0: performance.now(), ms,
+    };
+    cabinLight.intensity = cabinLight.userData.base * 1.8;
+    scene.environmentIntensity = 0.5;
+    key.intensity = baseKey * 0.25;
+    userInteracted = false;
+    emit('intro-start');
+    invalidate();
+  }
+
   function stepEntrance(now) {
     if (!entrance) return false;
-    const k = Math.min(1, (now - entrance.t0) / entrance.ms);
+    // (a frame's timestamp can be a hair earlier than the moment the entrance started)
+    const k = THREE.MathUtils.clamp((now - entrance.t0) / entrance.ms, 0, 1);
+    if (entrance.path) {
+      const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;   // easeInOutCubic
+      camera.position.copy(entrance.path.getPoint(e));
+      camera.lookAt(entrance.look.getPoint(e));
+      const lights = THREE.MathUtils.smoothstep(k, 0.25, 0.8);
+      scene.environmentIntensity = THREE.MathUtils.lerp(0.5, baseEnvIntensity, lights);
+      key.intensity = baseKey * THREE.MathUtils.lerp(0.25, 1, lights);
+      cabinLight.intensity = cabinLight.userData.base * THREE.MathUtils.lerp(1.8, 1, lights);
+      if (k >= 1) {
+        entrance = null;
+        controls.target.copy(target);
+        controls.update();
+        lastInteraction = performance.now();
+        emit('entrance-done');
+      }
+      return true;
+    }
     const e = 1 - Math.pow(1 - k, 4); // easeOutQuart: fast arrival, long graceful settle
     camera.position.setFromSpherical(new THREE.Spherical(
       THREE.MathUtils.lerp(entrance.from.radius, entrance.end.radius, e),
@@ -489,7 +573,6 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     anchors = new Map();
     const center = bounds.getCenter(new THREE.Vector3());
     for (const [id, z] of zones) {
-      if (id === 'windshield') continue;
       const box = new THREE.Box3();
       for (const m of z.meshes) box.expandByObject(m);
       let point = box.getCenter(new THREE.Vector3());
@@ -612,8 +695,8 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     // Windows → zones.
     const { zones: zoneMeshes, otherGlass, report } = buildGlassZones(pivot, model, v);
     for (const [id, meshes] of zoneMeshes) {
-      // The windshield itself is never selectable (only its strip is), so it has no zoneId.
-      for (const m of meshes) m.userData.zoneId = id === 'windshield' ? null : id;
+      // The windshield is selectable when the vehicle offers a strip or full-windshield tint.
+      for (const m of meshes) m.userData.zoneId = id === 'windshield' && !windshieldSelectable(v) ? null : id;
       zones.set(id, new GlassZone(id, meshes, tier, scene.environment));
       pickables.push(...meshes);
     }
@@ -640,7 +723,8 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     floorGlow.scale.set(extent * 2.6, extent * 2.6, 1);
     if (reflector) { reflector.scale.set(extent * 2.2, extent * 2.2, 1); reflector.position.y = 0; }
     cabinLight.position.set(0, size.y * 0.62, 0);
-    cabinLight.intensity = 0.9 * radius;
+    cabinLight.userData.base = 0.9 * radius;
+    cabinLight.intensity = cabinLight.userData.base;
     contact.scale.set(size.x * 1.25, size.z * 1.12, 1);
     shadowCatcher.scale.set(extent * 3, extent * 3, 1);
     floorGlow.position.y = 0.001;
@@ -675,7 +759,7 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     // Compile shaders now so the first interaction doesn't hitch.
     if (renderer.extensions.has('KHR_parallel_shader_compile')) await renderer.compileAsync(scene, camera).catch(() => {});
     else renderer.compile(scene, camera);
-    playEntrance();
+    playIntro();
     invalidate();
     emit('load', { vehicle: v, zones: [...zones.keys()] });
     return true;
@@ -704,6 +788,9 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
       tints = new Map(ids.map((id) => [id, tints.get(id) ?? defaultTint]));
       applyZoneTargets();
     },
+    playIntro,
+    /** Stop the fly-through and glide to the start view. */
+    skipIntro() { if (!entrance) return; cancelEntrance(); frame(currentHeroView(), 700); },
     /** Highlight the window being edited (null to clear). */
     focusZone(id) { focusId = id || null; lastInteraction = performance.now(); applyZoneTargets(); },
     /** Where a window is on screen, for pinning UI to it: container px + whether it faces us. */
@@ -736,15 +823,16 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     /** Show factory glass everywhere (before/after comparison). */
     setCompare(on) { compare = !!on; applyZoneTargets(); },
     /** Subtle glow on the given zones — "these windows just changed". */
-    pulse(ids = [...tints.keys()]) { for (const id of ids) zones.get(id)?.set({ glow: 0.55 }); invalidate(); },
-    availableZones: () => [...zones.keys()].filter((id) => id !== 'windshield'),
-    view(name, ms) { userInteracted = true; entrance = null; lastInteraction = performance.now(); return frame(viewFor(name), ms); },
+    pulse(ids = [...tints.keys()]) { for (const id of ids.flatMap(partsOf)) zones.get(id)?.set({ glow: 0.55 }); invalidate(); },
+    /** Selectable windows: the side/rear windows plus 'windshield' when the vehicle offers it. */
+    availableZones: () => [...new Set([...zones.keys()].map(pickIdOf))].filter((id) => id !== 'windshield' || windshieldSelectable(vehicle)),
+    view(name, ms) { userInteracted = true; cancelEntrance(); lastInteraction = performance.now(); return frame(viewFor(name), ms); },
     resetView(ms) { userInteracted = false; return frame(currentHeroView(), ms); },
     setAutoRotate(on) { controls.autoRotate = !!on && !reducedMotion(); invalidate(); },
     /** Full control (fullscreen): let one-finger drags orbit freely on phones. */
     setFreeTouch(on) { setTouchAction(on || !mobile ? 'none' : 'pan-y'); },
     resize,
-    screenshot() { draw(); return renderer.domElement.toDataURL('image/webp', 0.9); },
+    screenshot() { if (!tween && !entrance) controls.update(); draw(); return renderer.domElement.toDataURL('image/webp', 0.9); },
     dispose() {
       disposed = true;
       ro.disconnect();
@@ -758,6 +846,8 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     },
     // for tests / debugging
     get _internals() { return { scene, camera, controls, renderer, zones, anchors }; },
+    /** Tests: jump a running intro to fraction k (0..1) and hold it there. */
+    _seekIntro(k) { if (!entrance) return false; entrance.ms = 1e9; entrance.t0 = performance.now() - k * 1e9; invalidate(); return true; },
   };
   resize();
   return api;

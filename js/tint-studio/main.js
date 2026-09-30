@@ -1,9 +1,10 @@
 // Tint Studio controller: vehicle cards, per-window shades (tap a window on the car or use
-// the list), film choice, live configuration summary, booking hand-off, and the lazily
-// loaded 3D viewer. Everything here works without WebGL — the 3D car is an
-// enhancement layered on top (viewer.js is only imported when the studio nears the screen).
+// the list), windshield strip / full windshield, SUV extra windows, film choice, live
+// configuration summary, booking hand-off, and the lazily loaded 3D viewer. Everything here
+// works without WebGL — the 3D car is an enhancement layered on top (viewer.js is only
+// imported when the studio nears the screen).
 import { VEHICLES, DEFAULT_VEHICLE_ID, vehicleById } from './vehicles/index.js';
-import { ZONES, PACKAGES, DEFAULT_ZONES, EXTRAS, SHADES, DEFAULT_VLT, zoneById, shadeByVlt } from './zones.js';
+import { ZONES, PACKAGES, DEFAULT_ZONES, EXTRAS, SHADES, DEFAULT_VLT, WINDSHIELD_MODES, zoneById, shadeByVlt } from './zones.js';
 import { quote, formatPrice, pricingFor } from './pricing.js';
 
 const $ = (id) => document.getElementById(id);
@@ -22,10 +23,14 @@ const els = {
   badgeCount: $('studioBadgeCount'),
   compare: $('studioCompare'),
   fullscreen: $('studioFullscreen'),
+  intro: $('studioIntro'),
+  skip: $('studioSkip'),
   vehicles: $('studioVehicles'),
   packages: $('studioPackages'),
   zoneMap: $('zoneMap'),
   count: $('studioCount'),
+  suvWindows: $('suvWindows'),
+  suvExtraPrice: $('suvExtraPrice'),
   ceramic: $('ceramicUpgradeToggle'),
   carbon: $('filmCarbon'),
   ceramicAmount: $('ceramicUpgradeAmount'),
@@ -34,13 +39,18 @@ const els = {
   popTitle: $('zonePopTitle'),
   popKicker: $('zonePopKicker'),
   popValue: $('zonePopValue'),
+  popModes: $('zonePopModes'),
   popChips: $('zonePopChips'),
   popAll: $('zonePopAll'),
   popClose: $('zonePopClose'),
   pin: $('zonePin'),
   leader: $('zoneLeader'),
   leaderLine: $('zoneLeaderLine'),
-  stripShades: $('stripShades'),
+  wsStep: $('studioStripStep'),
+  wsModes: $('wsModes'),
+  wsStripPrice: $('wsStripPrice'),
+  wsFullPrice: $('wsFullPrice'),
+  wsShades: $('stripShades'),
   resultLabel: $('pricingResultLabel'),
   resultPrice: $('pricingResultPrice'),
   resultNote: $('pricingResultNote'),
@@ -51,10 +61,6 @@ const els = {
   barDetail: $('studioBarDetail'),
   barBook: $('studioBarBook'),
   customQuote: $('studioCustomQuote'),
-  strip: $('windshieldStripToggle'),
-  stripLabel: $('stripToggleLabel'),
-  stripPrice: $('stripPrice'),
-  stripStep: $('studioStripStep'),
 };
 const debug = new URLSearchParams(location.search).has('studio-debug');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -66,16 +72,34 @@ const state = {
   // Every tinted window and its own shade (VLT %). A window that isn't here stays factory
   // glass. Shades can be mixed freely — price depends only on how many windows are tinted.
   tints: new Map(DEFAULT_ZONES.map((id) => [id, initialVlt])),
-  strip: false,
-  stripVlt: 20,
+  windshield: { mode: 'none', vlt: 20 },   // 'none' | 'strip' | 'full'
+  extraWindows: false,    // SUV: has extra windows behind the rear doors (quarter / third row)
   vlt: initialVlt,        // the "every window" shade from the slider; new windows start here
   compare: false,
   open: null,             // window whose picker is open
 };
-const tintedIds = () => ZONES.filter((z) => state.tints.has(z.id)).map((z) => z.id);
-const zoneMapForViewer = () => ({ ...Object.fromEntries(state.tints), ...(state.strip ? { windshieldStrip: state.stripVlt } : {}) });
+
+// ---------- What the current vehicle offers ----------
+const hasExtras = (v = state.vehicle) => !!(v.glass?.quarterDriver || v.glass?.quarterPassenger);
+const windshieldModes = (v = state.vehicle) => WINDSHIELD_MODES.filter((m) => (m.id === 'strip' ? v.windshield?.strip : m.id === 'full' ? v.windshield?.full : false));
+const activeZones = () => ZONES.filter((z) => !z.extra || (hasExtras() && state.extraWindows && state.vehicle.glass?.[z.id]));
+const isActive = (id) => activeZones().some((z) => z.id === id);
+const tintedIds = () => activeZones().filter((z) => state.tints.has(z.id)).map((z) => z.id);
+const counts = () => {
+  const ids = tintedIds();
+  return { base: ids.filter((id) => !zoneById(id).extra).length, extra: ids.filter((id) => zoneById(id).extra).length };
+};
+function zoneMapForViewer() {
+  const map = Object.fromEntries(tintedIds().map((id) => [id, state.tints.get(id)]));
+  const { mode, vlt } = state.windshield;
+  if (mode === 'strip') map.windshieldStrip = vlt;
+  if (mode === 'full') { map.windshieldStrip = vlt; map.windshield = vlt; }
+  return map;
+}
 const shadeName = (vlt) => shadeByVlt(vlt)?.name || '';
-const zoneLabel = (id) => (id === 'windshieldStrip' ? EXTRAS.windshieldStrip.label : zoneById(id)?.label || id);
+const zoneLabel = (id) => (id === 'windshield' ? EXTRAS.windshield.label : zoneById(id)?.label || id);
+const viewOf = (id) => (id === 'windshield' ? EXTRAS.windshield.view : zoneById(id)?.view || 'hero');
+const wsModeLabel = (mode) => WINDSHIELD_MODES.find((m) => m.id === mode)?.label || 'No tint';
 let viewer = null;          // set once the 3D engine is up
 let viewerFailed = false;
 
@@ -93,7 +117,7 @@ function renderVehicles() {
     b.innerHTML = `
       <span class="vehicle-card-img">${v.thumb ? `<img src="${v.thumb}" alt="" loading="lazy" width="360" height="270">` : ''}
         <span class="vehicle-card-tag${v.modelUrl ? ' is-3d' : ''}">${tag}</span></span>
-      <span class="vehicle-card-text"><strong>${v.make === 'DNA Studio' ? v.model : `${v.make} ${v.model}`}</strong>
+      <span class="vehicle-card-text"><strong>${vehicleName(v)}</strong>
         <em>${bodyLabel}</em></span>`;
     b.addEventListener('click', () => selectVehicle(v.id));
     els.vehicles.appendChild(b);
@@ -126,11 +150,11 @@ function renderZones() {
   els.zoneMap.innerHTML = '';
   for (const z of ZONES) {
     const row = document.createElement('div');
-    row.className = 'zone-row';
+    row.className = `zone-row${z.extra ? ' zone-row--extra' : ''}`;
     row.dataset.zone = z.id;
     row.innerHTML = `
       <div class="zone-row-head">
-        <button type="button" class="zone-row-name" aria-label="Show the ${z.label.toLowerCase()} window on the car">${z.label}</button>
+        <button type="button" class="zone-row-name" aria-label="Show the ${z.label.toLowerCase()} window on the car">${z.label}${z.extra ? ' <em class="extra-price zone-extra-price"></em>' : ''}</button>
         <span class="zone-row-value" aria-hidden="true"></span>
       </div>
       <div class="zone-row-chips" role="radiogroup" aria-label="${z.label} tint">${[0, ...SHADES.map((x) => x.vlt)].map((v) => chipHtml(v, false)).join('')}</div>`;
@@ -150,28 +174,60 @@ function renderZones() {
     b.addEventListener('click', () => setZones(p.zones, { pulse: true }));
     els.packages.appendChild(b);
   }
-  els.stripShades.innerHTML = SHADES.map((x) => chipHtml(x.vlt, false)).join('');
-  els.stripShades.querySelectorAll('.shade-chip').forEach((c) => c.addEventListener('click', () => setZoneTint('windshieldStrip', Number(c.dataset.vlt), { from: 'list' })));
+  els.wsShades.innerHTML = SHADES.map((x) => chipHtml(x.vlt, false)).join('');
+  els.wsShades.querySelectorAll('.shade-chip').forEach((c) => c.addEventListener('click', () => setWindshield(null, Number(c.dataset.vlt), { from: 'list' })));
+  els.wsModes.querySelectorAll('.ws-mode').forEach((b) => b.addEventListener('click', () => setWindshield(b.dataset.mode, null, { from: 'list' })));
+  els.suvWindows.querySelectorAll('.suv-opt').forEach((b) => b.addEventListener('click', () => setExtraWindows(b.dataset.extra === '1', { from: 'list' })));
 }
 
 /** Tint one window (vlt 0 = no tint). The single entry point for list, popover and car. */
 function setZoneTint(id, vlt, { from = 'list' } = {}) {
-  if (id === 'windshieldStrip') {
-    if (vlt) { state.stripVlt = vlt; state.strip = true; } else state.strip = false;
-    els.strip.checked = state.strip;
-  } else if (vlt) state.tints.set(id, vlt);
+  if (id === 'windshield') { setWindshield(vlt ? null : 'none', vlt || null, { from }); return; }
+  if (zoneById(id)?.extra && vlt && !state.extraWindows) setExtraWindows(true, { from: 'auto' });
+  if (vlt) state.tints.set(id, vlt);
   else state.tints.delete(id);
   syncViewer();
   if (vlt) viewer?.pulse([id]);
-  if (from === 'list' && viewer && !reducedMotion && state.open !== id) viewer.view(id === 'windshieldStrip' ? EXTRAS.windshieldStrip.view : zoneById(id).view, 800);
+  if (from === 'list' && viewer && !reducedMotion && state.open !== id) viewer.view(viewOf(id), 800);
   update();
   flashRow(id);
+}
+
+/** Windshield: mode 'none' | 'strip' | 'full' (null = keep), shade (null = keep). */
+function setWindshield(mode, vlt, { from = 'list' } = {}) {
+  const ws = state.windshield;
+  const offered = windshieldModes().map((m) => m.id);
+  if (vlt) ws.vlt = vlt;
+  if (mode) ws.mode = mode === 'none' || offered.includes(mode) ? mode : ws.mode;
+  else if (vlt && ws.mode === 'none') ws.mode = offered[0] || 'none';   // picking a shade turns it on
+  syncViewer();
+  if (ws.mode !== 'none') viewer?.pulse(['windshield']);
+  if (from === 'list' && viewer && !reducedMotion && state.open !== 'windshield' && ws.mode !== 'none') viewer.view('front', 800);
+  update();
+  syncPicker();
+  flashRow('windshield');
+}
+
+/** SUV: does it have the extra windows behind the rear doors? */
+function setExtraWindows(on, { from = 'list' } = {}) {
+  state.extraWindows = !!on;
+  if (on) {
+    // new extra windows take the shade most of the car already has
+    for (const z of ZONES.filter((x) => x.extra && state.vehicle.glass?.[x.id])) if (!state.tints.has(z.id) && from !== 'auto') state.tints.set(z.id, state.vlt);
+  } else for (const z of ZONES.filter((x) => x.extra)) state.tints.delete(z.id);
+  syncViewer();
+  if (on && viewer) {
+    viewer.pulse(ZONES.filter((x) => x.extra).map((x) => x.id));
+    if (from === 'list' && !reducedMotion && !state.open) viewer.view('driver', 900);
+  }
+  update();
 }
 
 /** Replace the tinted set (packages): keeps each window's shade, new ones get the slider shade. */
 function setZones(ids, { pulse = false } = {}) {
   const next = new Map();
-  for (const id of ids) if (zoneById(id)) next.set(id, state.tints.get(id) ?? state.vlt);
+  for (const id of ids) if (zoneById(id) && isActive(id)) next.set(id, state.tints.get(id) ?? state.vlt);
+  // keep the shades of extra windows that are switched off, in case they come back
   state.tints = next;
   syncViewer();
   if (pulse && viewer) viewer.pulse(pulse === true ? tintedIds() : pulse);
@@ -181,7 +237,7 @@ function setZones(ids, { pulse = false } = {}) {
 const syncViewer = () => viewer?.setZoneTints(zoneMapForViewer());
 
 function flashRow(id) {
-  const row = id === 'windshieldStrip' ? els.stripShades : els.zoneMap.querySelector(`[data-zone="${id}"]`);
+  const row = id === 'windshield' ? els.wsStep : els.zoneMap.querySelector(`[data-zone="${id}"]`);
   if (!row || reducedMotion) return;
   row.classList.remove('is-flash');
   void row.offsetWidth;
@@ -191,32 +247,35 @@ function flashRow(id) {
 // Name in the list → swing the camera to that window and open its picker.
 async function showZone(id) {
   if (!viewer) return;
-  if (!reducedMotion) await viewer.view(id === 'windshieldStrip' ? EXTRAS.windshieldStrip.view : zoneById(id).view, 800);
+  if (!reducedMotion) await viewer.view(viewOf(id), 800);
   openPicker(id);
 }
-
-// ---------- Windshield strip add-on ----------
-function setStrip(on) {
-  setZoneTint('windshieldStrip', on ? state.stripVlt : 0, { from: 'list' });
-}
-els.strip.addEventListener('change', () => setStrip(els.strip.checked));
 
 // ---------- On-car window picker (popover pinned to the tapped window) ----------
 const compactStage = () => els.stage.clientWidth < 620;
 function openPicker(id) {
   if (!viewer || !viewer.availableZones().includes(id)) return;
-  const isStrip = id === 'windshieldStrip';
+  const isWs = id === 'windshield';
+  const extra = zoneById(id)?.extra;
   const was = state.open;
   state.open = id;
   viewer.focusZone(id);
   els.popTitle.textContent = zoneLabel(id);
-  els.popKicker.textContent = isStrip ? `Add-on · +${formatPrice(pricing().windshieldStrip)}` : 'Window tint';
+  const p = pricing();
+  els.popKicker.textContent = isWs ? 'Choose strip or full'
+    : extra ? `Extra window · +${formatPrice(p.extraWindow)}` : 'Window tint';
+  // Windshield: how much of it (strip / full) + its shade
+  const modes = isWs ? windshieldModes() : [];
+  els.popModes.hidden = !modes.length;
+  els.popModes.innerHTML = modes.map((m) => `<button type="button" role="radio" class="pop-mode" data-mode="${m.id}" aria-checked="false"><span class="ws-mode-art ws-mode-art--${m.id}" aria-hidden="true"></span><strong>${m.label}</strong><small>+${formatPrice(m.id === 'full' ? p.windshieldFull : p.windshieldStrip)}</small></button>`).join('');
+  els.popModes.querySelectorAll('.pop-mode').forEach((b) => b.addEventListener('click', () => setWindshield(b.dataset.mode, null, { from: 'picker' })));
   els.popChips.innerHTML = [0, ...SHADES.map((x) => x.vlt)].map((v) => chipHtml(v, false)).join('');
   els.popChips.querySelectorAll('.shade-chip').forEach((c) => c.addEventListener('click', () => {
     setZoneTint(id, Number(c.dataset.vlt), { from: 'picker' });
     syncPicker();
   }));
-  els.popAll.hidden = isStrip;
+  els.popAll.hidden = isWs;
+  els.pop.classList.toggle('is-windshield', isWs);
   els.pop.hidden = false;
   els.pin.hidden = false;
   setDocked(compactStage());
@@ -253,8 +312,8 @@ function setDocked(on) {
   viewer?.setFrameInset(on ? els.pop.offsetHeight + 16 : 0);
 }
 function currentVlt(id) {
-  if (id === 'windshieldStrip') return state.strip ? state.stripVlt : 0;
-  return state.tints.get(id) || 0;
+  if (id === 'windshield') return state.windshield.mode === 'none' ? 0 : state.windshield.vlt;
+  return isActive(id) ? state.tints.get(id) || 0 : 0;
 }
 function syncPicker() {
   const id = state.open;
@@ -263,9 +322,11 @@ function syncPicker() {
   els.popValue.textContent = vlt ? `${vlt}%` : 'Off';
   els.popValue.classList.toggle('is-off', !vlt);
   els.popChips.querySelectorAll('.shade-chip').forEach((c) => c.setAttribute('aria-checked', String(Number(c.dataset.vlt) === vlt)));
+  els.popModes.querySelectorAll('.pop-mode').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === state.windshield.mode)));
   els.popAll.disabled = !vlt;
   const docked = els.pop.classList.contains('is-docked');
   els.popAll.textContent = docked ? (vlt ? `${vlt}% on all` : 'All windows') : vlt ? `Use ${vlt}% on every window` : 'Use this shade on every window';
+  if (docked) viewer?.setFrameInset(els.pop.offsetHeight + 16);
 }
 function placePicker() {
   const id = state.open;
@@ -312,7 +373,7 @@ els.popAll.addEventListener('click', () => {
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.open) closePicker(); });
 
-/** The slider / "every window" shade: every tinted window takes it. */
+/** The slider / "every window" shade: every tinted window takes it (the windshield keeps its own). */
 function applyToAll(vlt, { committed = true } = {}) {
   state.vlt = vlt;
   for (const id of state.tints.keys()) state.tints.set(id, vlt);
@@ -349,34 +410,43 @@ function animatePrice(target) {
 const windowWord = (n) => `${n} window${n === 1 ? '' : 's'}`;
 const pricing = () => pricingFor(state.vehicle);
 function currentQuote() {
-  return quote(pricing(), state.tints.size, ZONES.length, { ceramic: els.ceramic.checked, strip: state.strip });
+  const { base, extra } = counts();
+  return quote(pricing(), { base, baseTotal: activeZones().filter((z) => !z.extra).length, extra, ceramic: els.ceramic.checked, windshield: state.windshield.mode });
 }
-const selectionText = (q) => [q.windowCount ? (q.isAll ? `all ${q.windowCount} windows` : windowWord(q.windowCount)) : '', q.strip ? 'windshield strip' : ''].filter(Boolean).join(' + ');
-const vehicleName = (v) => (v.make === 'DNA Studio' ? v.model : `${v.make} ${v.model}`);
-const uniformVlt = () => { const s = new Set(state.tints.values()); return s.size === 1 ? [...s][0] : null; };
-const shadeText = () => (state.tints.size ? (uniformVlt() != null ? `${uniformVlt()}%` : 'mixed shades') : '');
+const wsText = (q) => (q.windshield === 'full' ? 'full windshield' : q.windshield === 'strip' ? 'windshield strip' : '');
+const selectionText = (q) => [q.windowCount ? (q.isAll && q.extra === activeZones().filter((z) => z.extra).length ? `all ${q.windowCount} windows` : windowWord(q.windowCount)) : '', wsText(q)].filter(Boolean).join(' + ');
+function vehicleName(v) { return v.make === 'DNA Studio' ? v.model : `${v.make} ${v.model}`; }
+const uniformVlt = () => { const s = new Set(tintedIds().map((id) => state.tints.get(id))); return s.size === 1 ? [...s][0] : null; };
+const shadeText = () => (tintedIds().length ? (uniformVlt() != null ? `${uniformVlt()}%` : 'mixed shades') : '');
 
 function summaryRows(q) {
   const film = q.ceramic ? 'Ceramic' : 'Carbon';
+  const total = activeZones().length;
+  let windowsSub = '';
+  if (q.windowCount) {
+    const baseTxt = q.isAll ? `All ${q.base} ${formatPrice(q.baseCost)}` : `${q.base} × ${formatPrice(q.perWindow)}`;
+    windowsSub = q.extra ? `${baseTxt} + ${q.extra} extra × ${formatPrice(q.extraWindowPrice)}` : q.isAll ? `All-windows price ${formatPrice(q.carbon)}` : `${baseTxt} = ${formatPrice(q.carbon)}`;
+  }
   const rows = [
     ['Vehicle', `${vehicleName(state.vehicle)}`, q.categoryLabel],
-    ['Windows', q.windowCount ? `${q.windowCount} of ${ZONES.length}` : 'None yet', q.windowCount ? (q.isAll ? `All-windows price ${formatPrice(q.carbon)}` : `${q.windowCount} × ${formatPrice(q.perWindow)} = ${formatPrice(q.carbon)}`) : ''],
+    ['Windows', q.windowCount ? `${q.windowCount} of ${total}` : 'None yet', windowsSub],
   ];
-  const list = ZONES.filter((z) => state.tints.has(z.id)).map((z) => `<li><span>${z.label}</span><b>${state.tints.get(z.id)}%</b></li>`);
-  if (q.strip) list.push(`<li><span>Windshield strip</span><b>${state.stripVlt}%</b></li>`);
+  const list = activeZones().filter((z) => state.tints.has(z.id)).map((z) => `<li><span>${z.label}</span><b>${state.tints.get(z.id)}%</b></li>`);
+  if (q.windshield !== 'none') list.push(`<li><span>${q.windshield === 'full' ? 'Full windshield' : 'Windshield strip'}</span><b>${state.windshield.vlt}%</b></li>`);
   return { rows, list, film };
 }
 
 let lastSummaryKey = '';
 function renderSummary(q) {
   const { rows, list, film } = summaryRows(q);
-  const key = JSON.stringify([rows, list, film, q.total, q.upgrade, q.strip]);
+  const key = JSON.stringify([rows, list, film, q.total, q.upgrade, q.windshield]);
   if (key === lastSummaryKey) return;
   lastSummaryKey = key;
+  const depth = state.vehicle.windshield?.strip?.depth;
   const html = [
     ...rows.map(([k, v, sub]) => `<div class="cs-row"><dt>${k}</dt><dd>${v}${sub ? `<small>${sub}</small>` : ''}</dd></div>`),
     list.length ? `<div class="cs-row cs-row--list"><dt>Tint by window</dt><dd><ul class="cs-shades">${list.join('')}</ul></dd></div>` : '',
-    q.strip ? `<div class="cs-row"><dt>Windshield strip</dt><dd>+${formatPrice(q.strip)}<small>Top ${state.vehicle.windshield?.strip?.depth ? `${Math.round(state.vehicle.windshield.strip.depth / 0.0254)}-inch` : ''} strip</small></dd></div>` : '',
+    q.windshield !== 'none' ? `<div class="cs-row cs-row--pop"><dt>Windshield</dt><dd>+${formatPrice(q.windshieldCost)}<small>${q.windshield === 'full' ? 'Full windshield' : `Top ${depth ? `${Math.round(depth / 0.0254)}-inch ` : ''}strip`}</small></dd></div>` : '',
     `<div class="cs-row"><dt>Film</dt><dd>${film}<small>${q.ceramic ? 'Every tinted window' : 'Included · every tinted window'}</small></dd></div>`,
     q.ceramic ? `<div class="cs-row cs-row--upgrade"><dt>Ceramic upgrade</dt><dd>+${formatPrice(q.ceramicPrice)}<small>Flat, whole vehicle</small></dd></div>` : '',
   ].join('');
@@ -385,39 +455,57 @@ function renderSummary(q) {
 
 function update() {
   const q = currentQuote();
-  const n = state.tints.size;
+  const n = q.windowCount;
   const film = q.ceramic ? 'Ceramic' : 'Carbon';
-  const hasStrip = !!state.vehicle.windshield?.strip;
+  const zonesNow = activeZones();
+
+  // SUV extra windows question
+  const extrasHere = hasExtras();
+  els.suvWindows.hidden = !extrasHere;
+  els.suvExtraPrice.textContent = `+${formatPrice(q.extraWindowPrice)} each`;
+  els.suvWindows.querySelectorAll('.suv-opt').forEach((b) => b.setAttribute('aria-checked', String((b.dataset.extra === '1') === state.extraWindows)));
 
   // Per-window rows + packages.
   els.zoneMap.querySelectorAll('.zone-row').forEach((row) => {
-    const vlt = state.tints.get(row.dataset.zone) || 0;
+    const id = row.dataset.zone;
+    const shown = zonesNow.some((z) => z.id === id);
+    if (row.hidden === shown) { row.hidden = !shown; if (shown && !reducedMotion) { row.classList.remove('is-arriving'); void row.offsetWidth; row.classList.add('is-arriving'); } }
+    const vlt = shown ? state.tints.get(id) || 0 : 0;
     row.classList.toggle('is-on', !!vlt);
     row.querySelector('.zone-row-value').textContent = vlt ? `${vlt}% · ${shadeName(vlt)}` : 'Factory glass';
+    const price = row.querySelector('.zone-extra-price');
+    if (price) price.textContent = `+${formatPrice(q.extraWindowPrice)}`;
     row.querySelectorAll('.shade-chip').forEach((c) => c.setAttribute('aria-checked', String(Number(c.dataset.vlt) === vlt)));
   });
   els.packages.querySelectorAll('.studio-package').forEach((b) => {
     const p = PACKAGES.find((x) => x.id === b.dataset.package);
-    b.setAttribute('aria-pressed', String(p.zones.length === n && p.zones.every((z) => state.tints.has(z))));
+    const want = p.zones.filter(isActive);
+    b.setAttribute('aria-pressed', String(want.length === n && want.every((z) => state.tints.has(z))));
   });
-  els.count.textContent = `${n} of ${ZONES.length}`;
+  els.count.textContent = `${n} of ${zonesNow.length}`;
   const u = uniformVlt();
   els.badgeVlt.textContent = n ? (u != null ? `${u}%` : 'Mix') : '—';
-  els.badgeCount.textContent = n || state.strip ? selectionText(q).replace('windshield strip', 'strip') : 'none selected';
+  els.badgeCount.textContent = n || q.windshield !== 'none' ? selectionText(q).replace('windshield strip', 'strip') : 'none selected';
 
-  // Add-on + film.
-  els.stripStep.hidden = !hasStrip;
-  els.stripPrice.textContent = `+${formatPrice(q.stripPrice)}`;
-  els.stripLabel.classList.toggle('is-checked', state.strip);
-  els.stripShades.hidden = !state.strip;
-  els.stripShades.querySelectorAll('.shade-chip').forEach((c) => c.setAttribute('aria-checked', String(Number(c.dataset.vlt) === state.stripVlt)));
+  // Windshield + film.
+  const modes = windshieldModes();
+  els.wsStep.hidden = !modes.length;
+  els.wsStripPrice.textContent = `+${formatPrice(q.stripPrice)}`;
+  els.wsFullPrice.textContent = `+${formatPrice(q.fullPrice)}`;
+  els.wsModes.querySelectorAll('.ws-mode').forEach((b) => {
+    const m = b.dataset.mode;
+    b.hidden = m !== 'none' && !modes.some((x) => x.id === m);
+    b.setAttribute('aria-checked', String(m === state.windshield.mode));
+  });
+  els.wsShades.hidden = state.windshield.mode === 'none';
+  els.wsShades.querySelectorAll('.shade-chip').forEach((c) => c.setAttribute('aria-checked', String(Number(c.dataset.vlt) === state.windshield.vlt)));
   els.ceramicAmount.textContent = formatPrice(q.ceramicPrice);
   document.querySelectorAll('.film-option').forEach((c) => c.classList.toggle('is-selected', c.dataset.film === film));
   document.querySelectorAll('.film-compare-card').forEach((c) => c.classList.toggle('is-selected', c.dataset.film === film));
   els.nudge.hidden = true;
   renderSummary(q);
 
-  if (!n && !state.strip) {
+  if (!n && q.windshield === 'none') {
     els.resultLabel.textContent = 'Total';
     els.resultPrice.textContent = '—';
     shownPrice = null;
@@ -433,8 +521,9 @@ function update() {
   els.resultLabel.textContent = 'Total';
   animatePrice(q.total);
   const parts = [];
-  if (n) parts.push(q.isAll ? `All ${n} windows ${formatPrice(q.carbon)}` : `${windowWord(n)} × ${formatPrice(q.perWindow)}`);
-  if (q.strip) parts.push(`${formatPrice(q.strip)} windshield strip`);
+  if (q.base) parts.push(q.isAll ? `All ${q.base} windows ${formatPrice(q.baseCost)}` : `${windowWord(q.base)} × ${formatPrice(q.perWindow)}`);
+  if (q.extra) parts.push(`${q.extra} extra window${q.extra === 1 ? '' : 's'} × ${formatPrice(q.extraWindowPrice)}`);
+  if (q.windshield !== 'none') parts.push(`${formatPrice(q.windshieldCost)} ${wsText(q)}`);
   if (q.ceramic) parts.push(`${formatPrice(q.upgrade)} Ceramic upgrade`);
   els.resultNote.textContent = `${parts.join(' + ')} = ${formatPrice(q.total)}.`;
   els.barPrice.textContent = formatPrice(q.total);
@@ -451,20 +540,22 @@ els.carbon.addEventListener('change', onFilm);
 // ---------- Booking hand-off (js/script.js owns the form) ----------
 function book() {
   const q = currentQuote();
-  if (!q.windowCount && !q.strip) return;
+  if (!q.windowCount && q.windshield === 'none') return;
   const v = state.vehicle;
-  const labels = ZONES.filter((z) => state.tints.has(z.id)).map((z) => `${z.label} ${state.tints.get(z.id)}%`);
+  const labels = activeZones().filter((z) => state.tints.has(z.id)).map((z) => `${z.label} ${state.tints.get(z.id)}%`);
   const film = q.ceramic ? 'Ceramic' : 'Carbon';
-  const windowsText = [q.isAll ? `All windows (${labels.join(', ')})` : labels.join(', '), q.strip ? `Windshield strip ${state.stripVlt}% (+${formatPrice(q.strip)})` : ''].filter(Boolean).join(' + ');
+  const allOfThem = q.isAll && q.extra === activeZones().filter((z) => z.extra).length;
+  const wsDesc = q.windshield === 'none' ? '' : `${q.windshield === 'full' ? 'Full windshield' : 'Windshield strip'} ${state.windshield.vlt}% (+${formatPrice(q.windshieldCost)})`;
+  const windowsText = [labels.length ? (allOfThem ? `All windows (${labels.join(', ')})` : labels.join(', ')) : '', wsDesc].filter(Boolean).join(' + ');
   const u = uniformVlt();
   document.dispatchEvent(new CustomEvent('dna:book', {
     detail: {
-      vehicleType: q.categoryLabel,
+      vehicleType: q.categoryLabel + (hasExtras() ? (state.extraWindows ? ' — 4 rear side windows' : ' — 2 rear side windows') : ''),
       filmType: q.ceramic ? `Ceramic (+${formatPrice(q.upgrade)} upgrade)` : 'Carbon',
       windowCount: q.windowCount,
       shadeLevel: u != null ? u : 'mixed',
       windowsSelected: windowsText,
-      windshieldStrip: q.strip ? `Yes — ${state.stripVlt}% (+${formatPrice(q.strip)})` : 'No',
+      windshield: wsDesc || 'No',
       estimatedPrice: formatPrice(q.total),
       summaryTitle: q.categoryLabel,
       summaryDetail: ` — ${vehicleName(v)}, ${film}, ${u != null ? `${u}% VLT` : 'mixed shades'}, ${selectionText(q)}`,
@@ -490,8 +581,8 @@ document.addEventListener('dna:quote-reset', () => {
   els.carbon.checked = true;
   if (state.vehicle.id !== DEFAULT_VEHICLE_ID) selectVehicle(DEFAULT_VEHICLE_ID);
   closePicker();
-  state.strip = false;
-  els.strip.checked = false;
+  state.windshield = { mode: 'none', vlt: 20 };
+  state.extraWindows = false;
   state.tints = new Map();
   setZones(DEFAULT_ZONES);
 });
@@ -529,7 +620,8 @@ async function selectVehicle(id) {
   els.credit.textContent = v.credit || '';
   if (v.poster && !els.stage.classList.contains('is-ready')) els.poster.src = v.poster;
   closePicker();
-  if (!v.windshield?.strip && state.strip) setStrip(false);
+  // keep the windshield choice only if this vehicle offers it
+  if (state.windshield.mode !== 'none' && !windshieldModes(v).some((m) => m.id === state.windshield.mode)) state.windshield.mode = windshieldModes(v)[0]?.id || 'none';
   update();
   if (changedBody) animatePrice(currentQuote().total);
 
@@ -560,7 +652,7 @@ async function loadInViewer(v) {
     if (!done) return; // another vehicle was picked meanwhile
     syncViewer();
     viewer.setCompare(state.compare);
-    const missing = ZONES.filter((z) => !viewer.availableZones().includes(z.id));
+    const missing = ZONES.filter((z) => !z.extra && !viewer.availableZones().includes(z.id));
     if (missing.length && debug) console.warn('[tint-studio] zones without glass on this model:', missing.map((z) => z.id));
     els.stage.classList.add('is-3d', 'is-ready');
     showLoading(false);
@@ -574,12 +666,14 @@ async function loadInViewer(v) {
 }
 els.note.addEventListener('click', (e) => {
   if (e.target.closest('[data-retry]')) { showNote(''); loadInViewer(state.vehicle); }
+  if (e.target.closest('[data-restart]')) { showNote(''); els.stage.classList.remove('is-fallback'); viewerFailed = false; startViewer(); }
 });
 
-function showFallback() {
+function showFallback(reason = '') {
   showLoading(false);
   els.stage.classList.add('is-fallback');
-  showNote('Your browser can’t show the 3D preview here — pick your shade and windows below to get your price.');
+  const detail = reason ? `<small class="studio-note-why">${String(reason).replace(/[<>&]/g, '').slice(0, 160)}</small>` : '';
+  showNote(`The 3D preview couldn’t start here — pick your shade and windows below to get your price. <button type="button" class="link-btn" data-restart>Try again</button>${detail}`);
 }
 
 // ---------- Toolbar ----------
@@ -591,6 +685,8 @@ function setCompare(on) {
   viewer?.setCompare(on);
 }
 els.compare.addEventListener('click', () => setCompare(!state.compare));
+els.intro.addEventListener('click', () => { closePicker(); viewer?.playIntro(); });
+els.skip.addEventListener('click', () => viewer?.skipIntro());
 
 const isFullscreen = () => document.fullscreenElement === els.stage || els.stage.classList.contains('is-fullscreen');
 els.fullscreen.addEventListener('click', async () => {
@@ -638,7 +734,7 @@ function webglAvailable() {
 
 async function startViewer() {
   if (viewer || viewerFailed) return;
-  if (!webglAvailable()) { viewerFailed = true; if (state.vehicle.modelUrl) showFallback(); return; }
+  if (!webglAvailable()) { viewerFailed = true; if (state.vehicle.modelUrl) showFallback('WebGL is turned off or unavailable in this browser.'); return; }
   if (state.vehicle.modelUrl) showLoading(true);
   try {
     const { createTintViewer } = await import('./viewer.js');
@@ -652,13 +748,16 @@ async function startViewer() {
     viewer.on('render', placePicker);
     viewer.on('interaction', () => els.hint.classList.add('is-hidden'));
     viewer.on('load', () => { els.stage.classList.remove('is-entering'); void els.stage.offsetWidth; els.stage.classList.add('is-entering'); });
+    // Intro fly-through: cinematic bars + a skip button while it plays
+    viewer.on('intro-start', () => { closePicker(); els.stage.classList.add('is-intro'); });
+    viewer.on('entrance-done', () => els.stage.classList.remove('is-intro'));
     new ResizeObserver(() => { if (state.open) { setDocked(compactStage()); placePicker(); } }).observe(els.stage);
-    window.tintStudio = { viewer, state, selectVehicle, setZones, setZoneTint, openPicker, closePicker, applyToAll }; // console debugging / tests
+    window.tintStudio = { viewer, state, selectVehicle, setZones, setZoneTint, setWindshield, setExtraWindows, openPicker, closePicker, applyToAll }; // console debugging / tests
     if (state.vehicle.modelUrl) await loadInViewer(state.vehicle);
   } catch (err) {
     console.error('[tint-studio] 3D unavailable', err);
     viewerFailed = true;
-    if (state.vehicle.modelUrl) showFallback();
+    if (state.vehicle.modelUrl) showFallback(err?.message || err);
   }
   window.studioReady = true;
 }

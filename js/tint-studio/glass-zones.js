@@ -5,7 +5,7 @@
 // Coordinates: runs in the vehicle's "frame" (the centered, rotated pivot) where the car
 // faces +Z, +Y is up, and the centerline is x = 0. The driver's side (US, left-hand
 // drive) is therefore +X.
-import * as THREE from 'three';
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.186.1/+esm';
 
 const GLASS_MATERIAL_RE = /glass|window|windshield|windscreen|screen|glazing/i;
 const NOT_GLASS_RE = /gasket|wiper|mirror|light|lamp|lens|trim|frame|seal|chrome|rubber|handle|headlight|taillight|reflector/i;
