@@ -3,6 +3,11 @@
 
   document.getElementById("year").textContent = new Date().getFullYear();
 
+  // Weak devices (little memory or few cores) get the lighter motion set: no glass
+  // blur, blur-in reveals or scroll parallax — everything still works, just calmer.
+  const liteMotion = (navigator.deviceMemory || 8) <= 3 || (navigator.hardwareConcurrency || 8) <= 3;
+  document.documentElement.classList.toggle("lite-motion", liteMotion);
+
   // Inboxes notified when a quote is submitted, via FormSubmit.co (no backend
   // required). To add more, just add emails here — the form's action and
   // hidden _cc field below are kept in sync with this on load.
@@ -201,6 +206,29 @@
       });
     }, { threshold: 0.15, rootMargin: "0px 0px -40px 0px" });
     revealTargets.forEach((el) => revealObserver.observe(el));
+  }
+
+  /* ---------------------------------------------------------------------
+     Scroll parallax: decorative layers drift at their own speed
+     (data-parallax="0.15" = 15% of the scroll offset; transform-only, rAF-throttled)
+     --------------------------------------------------------------------- */
+  const parallaxLayers = Array.from(document.querySelectorAll("[data-parallax]"));
+  if (!prefersReducedMotion && !liteMotion && parallaxLayers.length) {
+    let parallaxQueued = false;
+    const updateParallax = () => {
+      parallaxQueued = false;
+      const vh = window.innerHeight;
+      parallaxLayers.forEach((el) => {
+        const r = (el.parentElement || el).getBoundingClientRect();
+        if (r.bottom < -200 || r.top > vh + 200) return; // off screen: leave it
+        const offset = r.top + r.height / 2 - vh / 2;
+        el.style.setProperty("--py", (-offset * Number(el.dataset.parallax)).toFixed(1));
+      });
+    };
+    window.addEventListener("scroll", () => {
+      if (!parallaxQueued) { parallaxQueued = true; requestAnimationFrame(updateParallax); }
+    }, { passive: true });
+    updateParallax();
   }
 
   /* ---------------------------------------------------------------------

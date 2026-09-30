@@ -626,6 +626,8 @@ if ('IntersectionObserver' in window) {
     document.documentElement.classList.toggle('studio-bar-open', show);
   };
   new IntersectionObserver(([e]) => { panelVisible = e.isIntersecting; sync(); }).observe(panel);
+  // Phones: the back-to-top button would sit on the 3D toolbar while the studio is on screen.
+  new IntersectionObserver(([e]) => document.documentElement.classList.toggle('studio-in-view', e.isIntersecting)).observe(els.stage);
   new IntersectionObserver(([e]) => { priceVisible = e.isIntersecting; sync(); }, { threshold: 0.6 }).observe(priceBox);
 }
 
