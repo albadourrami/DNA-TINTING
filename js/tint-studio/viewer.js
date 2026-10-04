@@ -683,7 +683,8 @@ export async function createTintViewer(container, { tier = pickTier(), debug = f
     const overrides = v.appearance || {};
     model.traverse((o) => {
       if (!o.isMesh) return;
-      o.castShadow = true;
+      // see-through parts (lamp covers, logo decals) don't cast rectangular shadows
+      o.castShadow = ![].concat(o.material).some((m) => m.transparent);
       for (const m of [].concat(o.material)) {
         const ov = overrides[m.name];
         if (ov) for (const [k, val] of Object.entries(ov)) { if (m[k]?.isColor) m[k].set(val); else m[k] = val; }

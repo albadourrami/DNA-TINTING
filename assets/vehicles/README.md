@@ -8,8 +8,8 @@ means adding files, not changing code.
 
 | Id | Slot | Source | Notes |
 |---|---|---|---|
-| `amg-c63` | Sedan / Coupe pricing | Owner-supplied model (confirm its license allows commercial website use) | Four-door sedan. The source has no interior, plates, exhaust or brakes, so the build generates a cabin, US plates, a rear diffuser with quad exhaust tips, and brake discs with red calipers (`details` in the recipe). |
-| `mercedes-gls` | SUV / Truck pricing | Purchased model (commercial license, owner-supplied) | Full interior. The panoramic roof stays factory glass. Rear windows = rear door glass; the third-row glass is a separate pair of optional "extra" windows (`quarterDriver` / `quarterPassenger`). |
+| `amg-c63` | Sedan / Coupe pricing | Owner-supplied model (confirm its license allows commercial website use) | Four-door sedan in satin grey-silver with DNA Tinting logo decals (doors + trunk). The source has no interior, plates, exhaust or brakes, so the build generates a cabin, US plates, a rear diffuser with quad exhaust tips, and brake discs with red calipers (`details` in the recipe). |
+| `mercedes-gls` | SUV / Truck pricing | Purchased model (commercial license, owner-supplied) | Satin grey-silver with DNA Tinting logo decals on both sides. Full interior. The panoramic roof stays factory glass. Rear windows = rear door glass; the third-row glass is a separate pair of optional "extra" windows (`quarterDriver` / `quarterPassenger`). |
 
 Hidden but kept working (`enabled: false`; preview with `?studio-vehicle=<id>`):
 - `audi-a3`: the earlier sedan, replaced by the AMG C63.
@@ -56,6 +56,14 @@ own storage. Only the web-optimized GLBs live here.
 When a car is selected the viewer plays a short fly-through (from the driver's seat, out through
 the rear glass, round to the start view). The path is built from the car's own glass, so new
 vehicles get it automatically; customers can skip or replay it.
+
+## Paint + logo decals
+
+Both cars use the `paint_silver` role in `tools/vehicles/recipes.py`. The DNA Tinting decals come
+from `details.decals` in a recipe (`side_width`, `side_z`, `side_y`, optional `rear_width` /
+`rear_z`, all in meters or fractions of the car's height/length): the build turns
+`assets/logo.png` into a transparent decal and ray-casts a fine grid onto the body so the vinyl
+follows the panels, reading correctly from each side. Change the logo file and rebuild to update.
 
 ## Windshield: top strip or full
 

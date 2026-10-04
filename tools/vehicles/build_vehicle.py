@@ -127,6 +127,10 @@ def principled(name, p):
             tex.image = bpy.data.images.load(os.path.join(SRC_DIR, t[4:]) if t.startswith('src:') else t)
             tex.image.pack()
         nt.links.new(tex.outputs['Color'], b.inputs['Base Color'])
+        if p.get('texture_alpha'):   # e.g. a logo decal: the texture's alpha cuts the shape
+            nt.links.new(tex.outputs['Alpha'], b.inputs['Alpha'])
+            m.blend_method = 'BLEND'
+            m.surface_render_method = 'BLENDED'
         if p.get('texture_emit'):
             nt.links.new(tex.outputs['Color'], b.inputs['Emission Color'])
             b.inputs['Emission Strength'].default_value = p.get('emit_strength', 1.0)

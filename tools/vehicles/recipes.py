@@ -19,6 +19,9 @@ ROLES = {
     'paint_blue':        dict(color=(0.07, 0.22, 0.58), metal=0.7, rough=0.3, coat=1.0, coat_rough=0.015),
     # Same blue, less metallic flake: hides panel waviness on lower-quality source meshes.
     'paint_blue_soft':   dict(color=(0.08, 0.23, 0.6), metal=0.42, rough=0.36, coat=1.0, coat_rough=0.02),
+    # Grey-silver metallic (think Iridium / Selenite): a neutral canvas that makes the DNA
+    # Tinting decals and the dark tinted glass pop.
+    'paint_silver':      dict(color=(0.58, 0.6, 0.63), metal=0.55, rough=0.36, coat=1.0, coat_rough=0.04),
     'trim_black':        dict(color=(0.035, 0.035, 0.04), rough=0.55),
     'trim_gloss_black':  dict(color=(0.02, 0.02, 0.022), rough=0.3, coat=0.3),
     'chrome':            dict(color=(0.97, 0.97, 0.98), metal=1.0, rough=0.06),
@@ -37,6 +40,8 @@ ROLES = {
     'drl':               dict(color=(1, 1, 1), rough=0.2, emit=(0.92, 0.96, 1), emit_strength=3.0),
     'indicator':         dict(color=(1, 0.55, 0.1), rough=0.2, emit=(1, 0.45, 0.05), emit_strength=1.2),
     'plate':             dict(color=(1, 1, 1), rough=0.45, texture='gen:plate.png'),
+    # vinyl logo decal (texture made from assets/logo.png with its background removed)
+    'decal':             dict(color=(1, 1, 1), rough=0.32, coat=0.6, coat_rough=0.05, texture='gen:decal.png', texture_alpha=True),
     'glass':             dict(color=(0.86, 0.92, 0.9), rough=0.02, transmission=1.0),  # replaced at runtime by the tint shader
     'caliper_red':       dict(color=(0.72, 0.04, 0.05), rough=0.28, coat=0.8, coat_rough=0.05),
     'brake_disc':        dict(color=(0.42, 0.42, 0.44), metal=1.0, rough=0.38),
@@ -78,7 +83,7 @@ RECIPES = {
         drop=['body.001', 'Plane', 'Plane.001', 'Plane.002'],   # stray half-body copy, blueprint planes, old plate
         split_materials={'body.003': ['Alloy']},                # body trim shares the rim material
         materials={
-            'bodypaint': 'paint_blue', 'Window': 'glass', 'Glass(headlights)': 'lamp_glass',
+            'bodypaint': 'paint_silver', 'Window': 'glass', 'Glass(headlights)': 'lamp_glass',
             'Headlight(Emission)': 'drl', 'Brake lights': 'tail_red', 'Tires': 'rubber', 'Alloy': 'alloy_amg',
             'body.003/Alloy': 'black_chrome', 'Trim': 'trim_gloss_black',
         },
@@ -86,13 +91,15 @@ RECIPES = {
             # AMG multi-spoke rims: bright machined face
             'alloy_amg': dict(color=(0.8, 0.81, 0.84), metal=1.0, rough=0.16),
         },
-        decimate={'paint_blue': 0.5, 'trim_gloss_black': 0.6, 'rubber': 0.5, 'alloy_amg': 0.7, 'drl': 0.35},
+        decimate={'paint_silver': 0.5, 'trim_gloss_black': 0.6, 'rubber': 0.5, 'alloy_amg': 0.7, 'drl': 0.35},
         beltline_z=0.5,
         smooth_angle=50,
         smooth_roles=['tail_red', 'lamp_glass'],   # coarse lamp cages: smooth, no creases
         interior=dict(seat='interior_leather', dark='interior_dark', trim='interior_trim', headliner='headliner'),
         # generated, because the source has none: plates, quad exhaust, diffuser, brakes
-        details=dict(plates=True, exhaust='quad', diffuser=True, brakes='caliper_red'),
+        details=dict(plates=True, exhaust='quad', diffuser=True, brakes='caliper_red',
+                     # DNA Tinting logo across both doors + on the trunk lid
+                     decals=dict(side_width=1.25, side_z=0.43, side_y=0.03, rear_width=0.46, rear_z=0.62)),
         plates=[dict(role='plate')],
     ),
     # ---------------- Mercedes-Benz GLS 580 (SUV slot) ----------------
@@ -101,19 +108,20 @@ RECIPES = {
         drop=['Cylinder', 'Cylinder.001'],
         weld=0.0006,
         materials={
-            'Polar_White': 'paint_blue', 'Color_M08': 'trim_black', 'Interior': 'interior_leather',
+            'Polar_White': 'paint_silver', 'Color_M08': 'trim_black', 'Interior': 'interior_leather',
             'Color_A08': 'tail_red', 'Color_A07': 'tail_red', 'Color_M02': 'chrome', 'Color_M03': 'alloy',
             'UnderCarriage': 'undercarriage', 'ChromeBlack_Windows': 'black_chrome',
             '_2020_Mercedes_Benz_GLS450_wire_088144225': 'interior_trim', 'Tyres': 'rubber',
             'WindowsTint': 'glass', 'Lights_Glass': 'lamp_glass', 'Color_M01': 'lamp_inner',
             'Grille': 'trim_gloss_black', 'Color_M04': 'lamp_inner', 'material': 'plate',
         },
-        decimate={'paint_blue': 0.6, 'trim_black': 0.55, 'interior_leather': 0.5, 'tail_red': 0.3,
+        decimate={'paint_silver': 0.6, 'trim_black': 0.55, 'interior_leather': 0.5, 'tail_red': 0.3,
                   'chrome': 0.6, 'alloy': 0.6, 'undercarriage': 0.35, 'interior_trim': 0.6, 'trim_gloss_black': 0.7,
                   'lamp_inner': 0.5, 'black_chrome': 0.8, 'rubber': 0.8},
         beltline_z=0.5,
         roof_glass=True,   # panoramic roof: stays factory glass
         quarter_glass=True,  # third-row windows are their own zones (optional extra windows)
+        details=dict(decals=dict(side_width=1.5, side_z=0.4, side_y=0.0)),   # tailgate is busy (plate + badge): doors only
         smooth_angle=35,
         plates=[dict(role='plate')],
     ),
@@ -264,6 +272,26 @@ def build_interior(bpy, bmesh, Vector, Matrix, roles, spec, log):
 # brake discs + calipers. Everything is placed by ray casting against the body, so it
 # sits on the real surfaces of any car.
 # ---------------------------------------------------------------------------
+def decal_image(path):
+    """The DNA Tinting logo (assets/logo.png, navy on light grey) as a transparent decal:
+    the background is removed, the navy artwork kept, trimmed to its content."""
+    from PIL import Image
+    import numpy as np
+    src = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'assets', 'logo.png')
+    im = np.asarray(Image.open(src).convert('RGB')).astype(np.float32) / 255
+    lum = im @ np.array([0.2126, 0.7152, 0.0722])
+    bg = 0.961
+    a = np.clip(np.clip((0.955 - lum) / 0.955, 0, 1) ** 0.85 * 1.15, 0, 1)
+    rgb = np.clip((im - bg * (1 - a[..., None])) / np.maximum(a[..., None], 1e-3), 0, 1)
+    ys, xs = np.where(a > 0.05)
+    pad = 8
+    y0, y1 = max(0, ys.min() - pad), min(a.shape[0], ys.max() + pad)
+    x0, x1 = max(0, xs.min() - pad), min(a.shape[1], xs.max() + pad)
+    out = np.dstack([rgb, a])[y0:y1, x0:x1]
+    Image.fromarray((out * 255).round().astype(np.uint8), 'RGBA').save(path)
+    return (x1 - x0) / (y1 - y0)
+
+
 def build_details(bpy, bmesh, Vector, Matrix, roles, spec, paint_role, log):
     from mathutils.bvhtree import BVHTree
     body = bpy.data.objects.get(paint_role)
@@ -401,6 +429,55 @@ def build_details(bpy, bmesh, Vector, Matrix, roles, spec, paint_role, log):
                 bm.faces.new(ring[0][:2] + ring[0][2:][::-1]); bm.faces.new((ring[-1][0], ring[-1][2], ring[-1][3], ring[-1][1]))
                 bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
                 link('Caliper', bm, spec['brakes'])
+
+    # --- DNA Tinting logo decals: both doors + the trunk / tailgate ---
+    if spec.get('decals'):
+        dspec = spec['decals']
+        tex_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.decal.png')
+        aspect = decal_image(tex_path)
+        mat = roles['decal']
+        tex = [n for n in mat.node_tree.nodes if n.type == 'TEX_IMAGE'][0]
+        tex.image = bpy.data.images.load(tex_path); tex.image.pack()
+        xs = [v.co.x for v in body.data.vertices]
+        L = ymax - ymin
+        X, Y, Z = Vector((1, 0, 0)), Vector((0, 1, 0)), Vector((0, 0, 1))
+        sides = [
+            # center, u axis (reads left→right from outside), ray direction, width
+            (Vector((0, ymin + L * (0.5 + dspec.get('side_y', 0)), H * dspec.get('side_z', 0.42))), Y, -X, dspec.get('side_width', 1.2)),    # driver (+X)
+            (Vector((0, ymin + L * (0.5 + dspec.get('side_y', 0)), H * dspec.get('side_z', 0.42))), -Y, X, dspec.get('side_width', 1.2)),    # passenger (-X)
+        ]
+        if dspec.get('rear_width'):
+            sides.append((Vector((0, 0, H * dspec.get('rear_z', 0.6))), -X, -Y, dspec['rear_width']))   # trunk / tailgate (+Y)
+        for center, u_axis, ray, w in sides:
+            h = w / aspect
+            nu, nv = 36, max(8, int(36 / aspect))
+            grid = {}
+            for j in range(nv + 1):
+                for i in range(nu + 1):
+                    p = center + u_axis * ((i / nu - 0.5) * w) + Z * ((j / nv - 0.5) * h)
+                    o = p - ray * 6.0                  # start well outside the body, looking in
+                    loc, nrm, _, dist = bvh.ray_cast(o, ray)
+                    if loc is None or nrm.dot(ray) > -0.25:
+                        continue
+                    grid[(i, j)] = (loc, nrm, dist)
+            if not grid:
+                log('decal: nothing to stick to'); continue
+            # drop hits that land far behind the panel (gaps, wheel arches, the other side)
+            ds = sorted(g[2] for g in grid.values())
+            med = ds[len(ds) // 2]
+            grid = {k: g for k, g in grid.items() if abs(g[2] - med) < 0.2}
+            bm = bmesh.new(); uvl = bm.loops.layers.uv.new()
+            vs = {k: bm.verts.new(g[0] + g[1] * 0.004) for k, g in grid.items()}
+            for j in range(nv):
+                for i in range(nu):
+                    ks = [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)]
+                    if all(k in vs for k in ks):
+                        f = bm.faces.new([vs[k] for k in ks])
+                        for loop, k in zip(f.loops, ks):
+                            loop[uvl].uv = (k[0] / nu, k[1] / nv)
+            bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+            link('Decal', bm, 'decal')
+        log('decals: logo aspect', round(aspect, 2))
 
     # one object per material
     by = {}
