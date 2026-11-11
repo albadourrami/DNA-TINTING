@@ -2,7 +2,8 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [claude/ui-ux-pro-max-skill-install-6rllki]
+    # Deploy whenever the live branch (Main) or the working branch is pushed.
+    branches: [Main, claude/dazzling-noether-8c5mfa]
   workflow_dispatch:
 
 permissions:
