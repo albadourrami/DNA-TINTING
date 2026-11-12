@@ -12,6 +12,8 @@
   // required). To add more, just add emails here — the form's action and
   // hidden _cc field below are kept in sync with this on load.
   const QUOTE_NOTIFY_EMAILS = ["albadourrami@gmail.com"];
+  // Cal.com booking page (cal.com/<this>). Customers pick their install time here.
+  const CAL_LINK = "rami-albadour-hcfr2i";
 
   /* ---------------------------------------------------------------------
      Sticky header + scroll progress bar
@@ -417,9 +419,108 @@
 
     quoteStart.hidden = true;
     pricingSummary.hidden = false;
+    showBookingCalendar(booking);
+  };
+
+  /* ---------------------------------------------------------------------
+     Booking calendar (Cal.com). Shown after "Book This Price"; the Tint
+     Studio selections go into the booking's notes. If the embedded calendar
+     can't load (blocked script, offline, preview sandbox), the "Open
+     calendar in a new tab" link always works.
+     --------------------------------------------------------------------- */
+  const booking = document.getElementById("booking");
+  const bookingOpen = document.getElementById("bookingOpen");
+  const bookingCalWrap = document.getElementById("bookingCalWrap");
+  const bookingCalStatus = document.getElementById("bookingCalStatus");
+  let calRenders = 0;
+
+  const bookingNotes = (b) => {
+    if (b.vehicleType && b.vehicleType.startsWith("Van / Other")) {
+      return "Custom quote: van / other vehicle. Please describe your vehicle and what you'd like tinted.";
+    }
+    return [
+      `Tint Studio quote: ${b.summaryTitle || ""}${b.summaryDetail || ""}`.trim(),
+      b.windowsSelected ? `Windows: ${b.windowsSelected}` : "",
+      b.filmType ? `Film: ${b.filmType}` : "",
+      `Estimated total: ${b.estimatedPrice}`,
+    ].filter(Boolean).join("\n");
+  };
+
+  const loadCalScript = () => {
+    /* Cal.com's standard embed loader */
+    (function (C, A, L) {
+      const p = function (a, ar) { a.q.push(ar); };
+      const d = C.document;
+      C.Cal = C.Cal || function () {
+        const cal = C.Cal;
+        const ar = arguments;
+        if (!cal.loaded) {
+          cal.ns = {};
+          cal.q = cal.q || [];
+          d.head.appendChild(d.createElement("script")).src = A;
+          cal.loaded = true;
+        }
+        if (ar[0] === L) {
+          const api = function () { p(api, arguments); };
+          const namespace = ar[1];
+          api.q = api.q || [];
+          if (typeof namespace === "string") {
+            cal.ns[namespace] = cal.ns[namespace] || api;
+            p(cal.ns[namespace], ar);
+            p(cal, ["initNamespace", namespace]);
+          } else p(cal, ar);
+          return;
+        }
+        p(cal, ar);
+      };
+    })(window, "https://app.cal.com/embed/embed.js", "init");
+    window.Cal("init", { origin: "https://cal.com" });
+    window.Cal("ui", { theme: "dark", layout: "month_view", styles: { branding: { brandColor: "#2563EB" } } });
+  };
+
+  const showBookingCalendar = (b) => {
+    const notes = bookingNotes(b);
+    bookingOpen.href = `https://cal.com/${CAL_LINK}?notes=${encodeURIComponent(notes)}`;
+    quoteForm.hidden = true;
+    booking.hidden = false;
+    booking.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    // A fresh container each time so the calendar picks up the new notes.
+    bookingCalWrap.querySelectorAll(".booking-cal").forEach((el) => el.remove());
+    const cal = document.createElement("div");
+    cal.className = "booking-cal";
+    cal.id = `bookingCal${++calRenders}`;
+    bookingCalWrap.appendChild(cal);
+    bookingCalStatus.hidden = false;
+    bookingCalStatus.textContent = "Loading the calendar…";
+
+    try {
+      if (!window.Cal) loadCalScript();
+      window.Cal("inline", {
+        elementOrSelector: `#${cal.id}`,
+        calLink: CAL_LINK,
+        config: { layout: "month_view", theme: "dark", notes },
+      });
+    } catch (err) {
+      // fall through to the timeout message below
+    }
+    const thisRender = calRenders;
+    window.setTimeout(() => {
+      if (thisRender !== calRenders) return;
+      if (cal.querySelector("iframe")) { bookingCalStatus.hidden = true; return; }
+      bookingCalStatus.innerHTML = "The calendar didn’t load here. Use <strong>Open calendar in a new tab</strong> above to pick your time.";
+    }, 8000);
+    const watch = window.setInterval(() => {
+      if (thisRender !== calRenders) { window.clearInterval(watch); return; }
+      if (cal.querySelector("iframe")) { bookingCalStatus.hidden = true; window.clearInterval(watch); }
+    }, 300);
+    window.setTimeout(() => window.clearInterval(watch), 8000);
+  };
+
+  document.getElementById("bookingCallback").addEventListener("click", () => {
     quoteForm.hidden = false;
     quoteForm.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  });
 
   document.addEventListener("dna:book", (event) => revealBookingForm(event.detail));
   document.getElementById("quoteStartCustom").addEventListener("click", () => {
@@ -515,7 +616,7 @@
       window.setTimeout(() => {
         quoteSubmitBtn.disabled = false;
         quoteSubmitBtn.removeAttribute("aria-busy");
-        quoteSubmitBtn.textContent = "Get My Free Quote";
+        quoteSubmitBtn.textContent = "Send My Details";
         quoteError.hidden = false;
         quoteError.scrollIntoView({ behavior: "smooth", block: "center" });
       }, remaining);
@@ -524,8 +625,9 @@
 
     quoteSubmitBtn.disabled = false;
     quoteSubmitBtn.removeAttribute("aria-busy");
-    quoteSubmitBtn.textContent = "Get My Free Quote";
+    quoteSubmitBtn.textContent = "Send My Details";
     quoteForm.hidden = true;
+    booking.hidden = true;
     quoteSuccess.hidden = false;
     quoteSuccess.scrollIntoView({ behavior: "smooth", block: "center" });
   });
@@ -544,11 +646,70 @@
     // Send them all the way back to the Tint Studio to start fresh.
     pricingSummary.hidden = true;
     quoteForm.hidden = true;
+    booking.hidden = true;
     quoteStart.hidden = false;
     document.dispatchEvent(new CustomEvent("dna:quote-reset"));
     glideShadeTo(35);
     studioSection.scrollIntoView({ behavior: "smooth", block: "start" });
   });
+
+  /* ---------------------------------------------------------------------
+     "Still have a question?" form — same FormSubmit delivery as quotes.
+     --------------------------------------------------------------------- */
+  const askForm = document.getElementById("askForm");
+  if (askForm) {
+    const askSubmit = document.getElementById("askSubmit");
+    const askError = document.getElementById("askError");
+    const askSuccess = document.getElementById("askSuccess");
+    askForm.action = `https://formsubmit.co/${notifyPrimary}`;
+    askForm.querySelector('input[name="_cc"]').value = notifyCc.join(",");
+
+    askForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      let firstInvalid = null;
+      askForm.querySelectorAll(".field-invalid").forEach((f) => f.classList.remove("field-invalid"));
+      askForm.querySelectorAll("[required]").forEach((input) => {
+        if (!input.value.trim()) {
+          input.closest(".field")?.classList.add("field-invalid");
+          if (!firstInvalid) firstInvalid = input;
+        }
+      });
+      if (firstInvalid) { firstInvalid.focus(); return; }
+
+      askSubmit.disabled = true;
+      askSubmit.textContent = "Sending…";
+      askError.hidden = true;
+      try {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 10000);
+        let response;
+        try {
+          response = await fetch(formSubmitEndpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify(Object.fromEntries(new FormData(askForm).entries())),
+            signal: controller.signal,
+          });
+        } finally {
+          window.clearTimeout(timeout);
+        }
+        if (!response.ok) throw new Error(`FormSubmit responded ${response.status}`);
+        askForm.hidden = true;
+        askSuccess.hidden = false;
+      } catch (err) {
+        askError.hidden = false;
+      } finally {
+        askSubmit.disabled = false;
+        askSubmit.textContent = "Send My Question";
+      }
+    });
+    document.getElementById("askAgain").addEventListener("click", () => {
+      askForm.reset();
+      askSuccess.hidden = true;
+      askForm.hidden = false;
+      document.getElementById("askQuestion").focus();
+    });
+  }
 
   /* ---------------------------------------------------------------------
      FAQ accordion: only one panel open at a time

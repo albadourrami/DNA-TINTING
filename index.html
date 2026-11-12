@@ -53,6 +53,10 @@
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         <span aria-hidden="true">(419) 309-7116</span>
       </a>
+      <a href="sms:+14193097116" class="header-text" aria-label="Text DNA Tinting at (419) 309-7116">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg>
+        <span>Text Us</span>
+      </a>
       <a href="#tint-price" class="btn btn-primary btn-sm">Find My Pricing</a>
       <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="mainNav">
         <span></span><span></span><span></span>
@@ -138,7 +142,7 @@
       <p class="eyebrow">It Runs In Our Blood</p>
       <h1>Window tinting, <span class="text-accent">engineered like DNA.</span></h1>
       <p class="hero-area">&#128205; Now Booking &mdash; Toledo, OH &amp; Surrounding Areas</p>
-      <p class="hero-lead">Ceramic and carbon films, laser-precision installs, and a lifetime warranty &mdash; done in our mobile rig at your home, office, or job site. No shop visit required.</p>
+      <p class="hero-lead">Ceramic and carbon films, laser-precision installs, and a lifetime manufacturer&rsquo;s warranty on every film &mdash; done in our mobile rig at your home, office, or job site. No shop visit required.</p>
       <div class="hero-cta">
         <a href="#tint-studio" class="btn btn-primary btn-lg btn-select-tint">
           Select My Tint
@@ -150,7 +154,7 @@
         <li><strong>100%</strong><span>Mobile Service</span></li>
         <li><strong>Free</strong><span>Instant Quotes</span></li>
         <li><strong>Toledo</strong><span>&amp; Nearby Areas</span></li>
-        <li><strong>Lifetime</strong><span>Warranty</span></li>
+        <li><strong>Lifetime</strong><span>Film Warranty</span></li>
       </ul>
     </div>
   </section>
@@ -171,6 +175,11 @@
           <div class="studio-stage" id="studioStage">
             <img class="studio-poster" id="studioPoster" src="assets/vehicles/amg-c63/poster.webp" alt="3D preview of a car with tinted windows" width="1600" height="1000" decoding="async">
             <img class="studio-photo" id="studioPhoto" alt="" hidden>
+            <!-- The 3D car only downloads when this is tapped (keeps the page fast on phones). -->
+            <button type="button" class="studio-3d-btn" id="studio3dBtn" hidden>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg>
+              <span><strong>View 3D model</strong><small>Rotate the car and tap any window</small></span>
+            </button>
             <div class="studio-loading" id="studioLoading" role="status" hidden>
               <div class="studio-progress" aria-hidden="true"><span id="studioProgressBar"></span></div>
               <p id="studioLoadingText">Loading 3D studio&hellip;</p>
@@ -267,6 +276,7 @@
             </div>
             <div class="studio-packages" id="studioPackages" role="group" aria-label="Window packages"></div>
             <div class="zone-list" id="zoneMap" aria-labelledby="studioWindowsLabel"></div>
+            <p class="studio-law" id="studioLaw" role="note" hidden><strong>Heads up:</strong> Ohio generally requires front side windows to let in at least 50% of light, so 5%, 20% and 35% aren&rsquo;t street-legal on the front doors in Ohio, and Michigan is stricter. We&rsquo;ll confirm what&rsquo;s allowed where you drive before we install.</p>
             <p class="zone-hint">Mix and match: tap any window on the car, or pick a shade per window here. The price doesn&rsquo;t change with the shade.</p>
           </div>
 
@@ -474,7 +484,7 @@
         <ul class="trust-chips">
           <li>100% Mobile</li>
           <li>Evenings &amp; Weekends</li>
-          <li>Same Lifetime Warranty</li>
+          <li>Lifetime Film Warranty</li>
         </ul>
       </div>
 
@@ -492,12 +502,12 @@
         <div class="step" data-reveal>
           <span class="step-num">03</span>
           <h3>Book Your Install</h3>
-          <p>Pick a time that works &mdash; we come to your home or office, or you can drop off at our shop.</p>
+          <p>Pick an open time on our calendar and we come to your home, office, or job site. <span class="soon-tag">Shop drop-off coming soon</span></p>
         </div>
         <div class="step" data-reveal>
           <span class="step-num">04</span>
           <h3>Drive Away Covered</h3>
-          <p>Most installs finish same-day, backed by our lifetime no-bubble, no-fade warranty.</p>
+          <p>Most installs finish same-day, and every film is backed by a lifetime manufacturer&rsquo;s warranty.</p>
         </div>
       </div>
 
@@ -551,7 +561,7 @@
         </div>
         <div class="stat">
           <span class="stat-num">Lifetime</span>
-          <span class="stat-label">Warranty Coverage</span>
+          <span class="stat-label">Film Warranty</span>
         </div>
       </div>
     </div>
@@ -601,7 +611,7 @@
       <div class="section-head" data-reveal>
         <p class="kicker">Why DNA Tinting</p>
         <h2>Now booking our first customers in Toledo.</h2>
-        <p class="section-lead">We&rsquo;re a brand-new, 100% mobile tint shop built on one idea: bring premium film and a lifetime warranty straight to your driveway &mdash; no shop, no waiting room, no hassle.</p>
+        <p class="section-lead">We&rsquo;re a brand-new, 100% mobile tint shop built on one idea: bring premium film with a lifetime manufacturer&rsquo;s warranty straight to your driveway &mdash; no shop, no waiting room, no hassle.</p>
       </div>
       <div class="grid grid-3">
         <article class="card service-card" data-reveal>
@@ -615,8 +625,8 @@
           <div class="service-icon" style="--icon-color:#93C5FD">
             <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>
           </div>
-          <h3>Lifetime Warranty</h3>
-          <p>Every install is backed against bubbling, peeling, and fade for as long as you own the vehicle &mdash; no fine print.</p>
+          <h3>Lifetime Film Warranty</h3>
+          <p>Every film we install carries a lifetime manufacturer&rsquo;s warranty against defects in the film itself &mdash; bubbling, peeling, cracking, or discoloration. <a href="#faq-warranty">What&rsquo;s covered</a></p>
         </article>
         <article class="card service-card" data-reveal>
           <div class="service-icon" style="--icon-color:#CBD5E1">
@@ -635,7 +645,7 @@
       <div class="section-head" data-reveal>
         <p class="kicker">Book Your Install</p>
         <h2>Lock in your price, then pick a time.</h2>
-        <p class="section-lead">Build your tint in the Tint Studio, then tell us about your vehicle and where to meet you. We&rsquo;ll confirm the details within one business day.</p>
+        <p class="section-lead">Build your tint in the Tint Studio, then pick an open time on our calendar. Rather we reach out? Send your details and we&rsquo;ll call or text you within one business day.</p>
       </div>
 
       <div class="quote-start card" id="quoteStart" data-reveal>
@@ -644,6 +654,22 @@
           <a href="#tint-studio" class="btn btn-primary">Open the Tint Studio</a>
           <button type="button" class="btn btn-outline" id="quoteStartCustom">Van / other &mdash; custom quote</button>
         </div>
+      </div>
+
+      <!-- Booking calendar (Cal.com). js/script.js loads it when someone books from the Tint Studio
+           and puts their selections in the booking notes. Change the calendar in CAL_LINK there. -->
+      <div class="booking card" id="booking" hidden>
+        <div class="booking-head">
+          <div>
+            <h3>Pick your install time</h3>
+            <p>Choose an open slot. Your Tint Studio selections are already in the booking notes.</p>
+          </div>
+          <a class="btn btn-outline btn-sm" id="bookingOpen" href="https://cal.com/rami-albadour-hcfr2i" target="_blank" rel="noopener">Open calendar in a new tab</a>
+        </div>
+        <div class="booking-cal-wrap" id="bookingCalWrap">
+          <p class="booking-cal-status" id="bookingCalStatus">Loading the calendar&hellip;</p>
+        </div>
+        <p class="booking-alt">Rather we reach out? <button type="button" class="link-btn" id="bookingCallback">Send your details instead</button> &middot; or <a href="sms:+14193097116">text us at (419) 309-7116</a></p>
       </div>
 
       <div class="pricing-summary card" id="pricingSummary" hidden>
@@ -771,7 +797,7 @@
             We couldn't send that automatically. Please call or text us at
             <a href="tel:4193097116" aria-label="Call or text DNA Tinting at 419-309-7116">419-309-7116</a> and we'll get your quote started right away.
           </p>
-          <button type="submit" class="btn btn-primary btn-lg" id="quoteSubmitBtn" aria-live="polite" aria-atomic="true">Submit My Availability</button>
+          <button type="submit" class="btn btn-primary btn-lg" id="quoteSubmitBtn" aria-live="polite" aria-atomic="true">Send My Details</button>
         </div>
       </form>
 
@@ -796,15 +822,17 @@
       <div class="accordion" id="accordion">
         <details class="accordion-item" open>
           <summary>Is dark window tint legal where I live?</summary>
-          <p>Legal VLT limits vary by state and province. When you submit a quote, we automatically check your ZIP code against local law and recommend compliant shades &mdash; or explain your options if you want a medical or aftermarket exemption.</p>
+          <p>Tint limits vary by state. In Ohio, front side windows generally have to let in at least 50% of light, while rear side windows and the rear windshield can go darker. Michigan&rsquo;s rules for the front windows are stricter. Before we install, we&rsquo;ll go over what&rsquo;s allowed where you drive and help you pick a shade that fits.</p>
         </details>
         <details class="accordion-item">
           <summary>How long does an install take?</summary>
           <p>Most passenger vehicles are done in 1&ndash;3 hours. Full-vehicle ceramic packages or larger SUVs/trucks can take up to half a day. We&rsquo;ll give you an exact estimate when you book.</p>
         </details>
-        <details class="accordion-item">
+        <details class="accordion-item" id="faq-warranty">
           <summary>What does the lifetime warranty cover?</summary>
-          <p>Every film we install is covered against bubbling, peeling, and color fade for as long as you own the vehicle &mdash; no fine print, transferable with proof of purchase.</p>
+          <p>Every film we install is backed by a lifetime manufacturer&rsquo;s warranty for as long as you own the vehicle. It covers defects in the film itself: bubbling, peeling, cracking, delaminating, and fading or color change.</p>
+          <p>It does not cover damage from use, care, or outside causes, including scratches, nicks, or tears; cleaning with ammonia-based or abrasive products; rolling windows down before the film has cured; broken or replaced glass; and accidents or vandalism.</p>
+          <p>If you notice a problem, call or text us and we&rsquo;ll take a look.</p>
         </details>
         <details class="accordion-item">
           <summary>How soon can I roll my windows down?</summary>
@@ -812,12 +840,46 @@
         </details>
         <details class="accordion-item">
           <summary>Do you offer mobile installation?</summary>
-          <p>Yes &mdash; it&rsquo;s the only way we operate. We&rsquo;re a 100% mobile business with no shop to visit: our fully equipped rig comes to your home, office, or job site at no extra charge within our service area.</p>
+          <p>Yes &mdash; it&rsquo;s the only way we operate. We&rsquo;re a 100% mobile business with no shop to visit: our fully equipped rig comes to your home, office, or job site at no extra charge within our service area. Shop drop-off is coming soon for anyone who&rsquo;d rather bring the car to us.</p>
         </details>
         <details class="accordion-item">
           <summary>What areas do you serve?</summary>
           <p>We&rsquo;re based in Toledo, OH and serve the surrounding area, including Perrysburg, Maumee, Sylvania, Rossford, Swanton, Fremont, Oregon, Waterville, and Southeast Michigan (Temperance, Monroe, and nearby). Not sure if you&rsquo;re in range? Start a quote and tell us your address &mdash; we&rsquo;ll confirm right away.</p>
         </details>
+      </div>
+
+      <!-- Ask a question: delivered by FormSubmit to QUOTE_NOTIFY_EMAILS (js/script.js). -->
+      <div class="ask card" id="ask" data-reveal>
+        <h3>Still have a question?</h3>
+        <p class="ask-lead">Send it here and we&rsquo;ll get back to you within one business day &mdash; or <a href="sms:+14193097116">text us at (419) 309-7116</a>.</p>
+        <form class="ask-form" id="askForm" novalidate method="POST" action="https://formsubmit.co/albadourrami@gmail.com">
+          <input type="hidden" name="_subject" value="New Question &mdash; DNA Tinting">
+          <input type="hidden" name="_template" value="table">
+          <input type="hidden" name="_cc" value="">
+          <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
+          <div class="form-grid form-grid-2">
+            <div class="field">
+              <label for="askName">Your name</label>
+              <input type="text" id="askName" name="name" autocomplete="name" required>
+            </div>
+            <div class="field">
+              <label for="askContact">Phone or email</label>
+              <input type="text" id="askContact" name="contact" autocomplete="tel" placeholder="So we can answer you" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="askQuestion">Your question</label>
+            <textarea id="askQuestion" name="question" rows="4" placeholder="Ask us anything about tint, pricing, or scheduling&hellip;" required></textarea>
+          </div>
+          <div class="ask-footer">
+            <p class="form-error" id="askError" role="status" hidden>That didn&rsquo;t send. Please text or call us at <a href="sms:+14193097116">(419) 309-7116</a>.</p>
+            <button type="submit" class="btn btn-primary" id="askSubmit">Send My Question</button>
+          </div>
+        </form>
+        <div class="ask-success" id="askSuccess" role="status" hidden>
+          <strong>Thanks &mdash; your question is on its way.</strong>
+          <p>We&rsquo;ll reply within one business day. <button type="button" class="link-btn" id="askAgain">Ask another question</button></p>
+        </div>
       </div>
     </div>
   </section>
@@ -832,6 +894,7 @@
       </div>
       <div class="cta-band-actions">
         <a href="#tint-studio" class="btn btn-primary btn-lg" aria-label="Open the Tint Studio">Select My Tint</a>
+        <a href="sms:+14193097116" class="btn btn-outline-light btn-lg" aria-label="Text DNA Tinting at (419) 309-7116">Text Us</a>
         <a href="tel:+14193097116" class="btn btn-outline-light btn-lg" aria-label="Call DNA Tinting at (419) 309-7116">Call (419) 309-7116</a>
       </div>
     </div>
@@ -863,6 +926,7 @@
         <li><a href="#gallery">Gallery</a></li>
         <li><a href="#why-us">Why Us</a></li>
         <li><a href="#faq">FAQ</a></li>
+        <li><a href="#ask">Ask a Question</a></li>
       </ul>
     </div>
 
@@ -879,7 +943,8 @@
     <div class="footer-col">
       <h4>Contact</h4>
       <ul>
-        <li><a href="tel:+14193097116" aria-label="Call DNA Tinting at (419) 309-7116">(419) 309-7116</a></li>
+        <li><a href="tel:+14193097116" aria-label="Call DNA Tinting at (419) 309-7116">Call (419) 309-7116</a></li>
+        <li><a href="sms:+14193097116" aria-label="Text DNA Tinting at (419) 309-7116">Text (419) 309-7116</a></li>
         <li><a href="mailto:hello@dnatinting.com" aria-label="Email DNA Tinting at hello@dnatinting.com">hello@dnatinting.com</a></li>
         <li>100% Mobile &mdash; Toledo, OH &amp; Surrounding Areas</li>
         <li>Mon&ndash;Sat: 9am &ndash; 9pm</li>

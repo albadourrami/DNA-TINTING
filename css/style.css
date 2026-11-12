@@ -1396,3 +1396,85 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(96, 165, 
   .zone-pin::before, .zone-pin::after, .zone-pop.is-in, .zone-pop.is-in .shade-chip, .film-option.is-pop, .film-option.is-pop::after,
   .zone-row.is-flash, .studio-stage.is-entering::after, .cs-row--upgrade, .strip-shades:not([hidden]), .btn-sheen:hover::after { animation: none; }
 }
+
+/* ==========================================================================
+   Text Us, View 3D model, tint-law note, booking calendar, question box
+   ========================================================================== */
+.header-text {
+  display: inline-flex; align-items: center; gap: 7px; padding: 0.5em 1em; border-radius: 999px;
+  font-family: var(--font-heading); font-weight: 600; font-size: 0.9rem; color: var(--color-ink);
+  border: 1px solid rgba(148, 163, 184, 0.35); background: rgba(148, 163, 184, 0.08);
+  transition: background var(--transition), border-color var(--transition), transform var(--transition);
+}
+.header-text:hover { background: rgba(37, 99, 235, 0.18); border-color: var(--color-accent-light); transform: translateY(-1px); }
+@media (max-width: 640px) {
+  .header-actions { gap: 10px; }
+  .header-text { padding: 0; width: 40px; height: 40px; justify-content: center; }
+  .header-text span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+/* Studio before 3D is requested: poster + "View 3D model" button, no 3D-only controls */
+.studio-stage.is-idle .studio-toolbar, .studio-stage.is-idle .studio-hint { display: none; }
+.studio-stage.is-idle:not(.is-ready):not(.is-photo):not(.is-fallback) .studio-poster { animation: none; opacity: 1; }
+.studio-3d-btn {
+  position: absolute; left: 50%; bottom: 9%; transform: translateX(-50%); z-index: 6; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 12px; padding: 14px 22px 14px 18px; border-radius: 999px;
+  border: 1px solid rgba(147, 197, 253, 0.45); background: rgba(7, 12, 22, 0.72); color: #fff; cursor: pointer;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45), 0 0 0 0 rgba(37, 99, 235, 0.5);
+  animation: view3dPulse 2.6s ease-out infinite; transition: background var(--transition), transform 200ms var(--ease-spring);
+  text-align: left; font: inherit;
+}
+.studio-3d-btn[hidden] { display: none; }
+.studio-3d-btn:hover { background: rgba(37, 99, 235, 0.85); transform: translateX(-50%) scale(1.04); }
+@media (max-width: 640px) { .studio-3d-btn { bottom: 6%; padding: 11px 18px 11px 14px; } .studio-3d-btn strong { font-size: 0.98rem; } }
+.studio-3d-btn svg { flex: none; color: var(--color-accent-light); }
+.studio-3d-btn:hover svg { color: #fff; }
+.studio-3d-btn span { display: flex; flex-direction: column; line-height: 1.2; }
+.studio-3d-btn strong { font-family: var(--font-heading); font-size: 1.05rem; }
+.studio-3d-btn small { font-size: 0.75rem; color: #cbd5e1; }
+@keyframes view3dPulse {
+  0% { box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45), 0 0 0 0 rgba(37, 99, 235, 0.55); }
+  70%, 100% { box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45), 0 0 0 16px rgba(37, 99, 235, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .studio-3d-btn { animation: none; } }
+
+.studio-law {
+  margin: 12px 0 0; padding: 10px 12px; border-radius: var(--radius-sm); font-size: 0.8rem; line-height: 1.45;
+  background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(251, 191, 36, 0.35); color: #fcd34d;
+}
+.studio-law[hidden] { display: none; }
+.studio-law strong { color: #fde68a; }
+
+.soon-tag {
+  display: inline-block; margin-top: 6px; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;
+  background: rgba(37, 99, 235, 0.15); border: 1px solid rgba(96, 165, 250, 0.35); color: var(--color-accent-light);
+}
+
+/* Booking calendar */
+.booking { max-width: 860px; margin: 0 auto 20px; padding: 24px 28px; }
+.booking[hidden] { display: none; }
+.booking-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.booking-head h3 { margin: 0 0 4px; }
+.booking-head p { margin: 0; color: var(--color-text-soft); font-size: 0.92rem; }
+.booking-cal-wrap { min-height: 120px; border-radius: var(--radius-md); overflow: hidden; }
+.booking-cal { width: 100%; min-height: 0; overflow: auto; }
+.booking-cal-status { margin: 0; padding: 28px 16px; text-align: center; color: var(--color-text-soft); font-size: 0.92rem; }
+.booking-cal-status[hidden] { display: none; }
+.booking-alt { margin: 16px 0 0; font-size: 0.88rem; color: var(--color-text-soft); }
+.booking-alt a { color: var(--color-accent-light); }
+@media (max-width: 640px) { .booking { padding: 18px 16px; } }
+
+/* Ask a question */
+.ask { margin-top: 32px; padding: 28px; }
+.ask h3 { margin: 0 0 6px; }
+.ask-lead { margin: 0 0 18px; color: var(--color-text-soft); }
+.ask-lead a, .ask .form-error a { color: var(--color-accent-light); }
+.ask-form[hidden], .ask-success[hidden] { display: none; }
+.ask-form textarea { width: 100%; }
+.ask-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 4px; }
+.ask-footer .form-error { order: 0; }
+.ask-success strong { display: block; margin-bottom: 4px; }
+.ask-success p { margin: 0; color: var(--color-text-soft); }
+@media (max-width: 640px) { .ask { padding: 20px 16px; } .ask-footer .btn { width: 100%; } }
+.field.field-invalid textarea { border-color: var(--color-error); box-shadow: 0 0 0 3px rgba(220,38,38,0.12); }

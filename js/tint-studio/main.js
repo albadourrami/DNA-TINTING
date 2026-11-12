@@ -61,6 +61,8 @@ const els = {
   barDetail: $('studioBarDetail'),
   barBook: $('studioBarBook'),
   customQuote: $('studioCustomQuote'),
+  view3d: $('studio3dBtn'),
+  law: $('studioLaw'),
 };
 const debug = new URLSearchParams(location.search).has('studio-debug');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -503,6 +505,7 @@ function update() {
   document.querySelectorAll('.film-option').forEach((c) => c.classList.toggle('is-selected', c.dataset.film === film));
   document.querySelectorAll('.film-compare-card').forEach((c) => c.classList.toggle('is-selected', c.dataset.film === film));
   els.nudge.hidden = true;
+  els.law.hidden = !['frontDriver', 'frontPassenger'].some((id) => { const t = isActive(id) ? state.tints.get(id) || 0 : 0; return t > 0 && t < FRONT_LEGAL_MIN_VLT; });
   renderSummary(q);
 
   if (!n && q.windshield === 'none') {
@@ -625,6 +628,7 @@ async function selectVehicle(id) {
   update();
   if (changedBody) animatePrice(currentQuote().total);
 
+  syncView3d();
   if (!v.modelUrl) {
     // No licensed 3D model yet: show the real photo; pricing and selection still work.
     els.stage.classList.add('is-photo');
@@ -728,6 +732,13 @@ if ('IntersectionObserver' in window) {
 }
 
 // ---------- Lazy 3D start ----------
+// Tint darker than this on the front side windows isn't legal in Ohio (shows the note in step 3).
+const FRONT_LEGAL_MIN_VLT = 50;
+function syncView3d() {
+  const idle = !viewer && !viewerFailed;
+  els.stage.classList.toggle('is-idle', idle);
+  els.view3d.hidden = !(idle && state.vehicle.modelUrl);
+}
 function webglAvailable() {
   try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; }
 }
@@ -768,13 +779,13 @@ els.credit.textContent = state.vehicle.credit || '';
 if (state.vehicle.poster) els.poster.src = state.vehicle.poster;
 update();
 
-// Start downloading three.js + the model once the page itself has loaded and the studio is
-// close to the viewport — the hero never waits on 3D.
-const whenLoaded = document.readyState === 'complete' ? Promise.resolve() : new Promise((r) => addEventListener('load', r, { once: true }));
-whenLoaded.then(() => {
-  if (!('IntersectionObserver' in window)) { startViewer(); return; }
-  const io = new IntersectionObserver((entries) => {
-    if (entries.some((e) => e.isIntersecting)) { io.disconnect(); startViewer(); }
-  }, { rootMargin: '600px 0px' });
-  io.observe(els.stage);
+// The 3D car (three.js + a few MB of model) only downloads when the customer taps
+// "View 3D model" — until then the stage shows the poster and pricing works as usual.
+// ?studio-3d starts it right away (handy for testing).
+els.view3d.addEventListener('click', () => {
+  els.view3d.hidden = true;
+  els.stage.classList.remove('is-idle');
+  startViewer();
 });
+syncView3d();
+if (new URLSearchParams(location.search).has('studio-3d')) els.view3d.click();
